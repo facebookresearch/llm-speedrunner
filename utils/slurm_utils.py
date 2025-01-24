@@ -11,6 +11,7 @@ def launch_job(
     job_name: str,
     account: str,
     qos: str,
+    working_dir: str,
     log_dir='submitit_logs'
 ):
     """
@@ -44,6 +45,9 @@ def launch_job(
         slurm_partition="gpu",  # Change this if a different partition is required
         slurm_account=account,
         slurm_qos=qos,
+        slurm_additional_parameters={
+            "chdir": working_dir
+        },
     )
 
     # Define the job to run

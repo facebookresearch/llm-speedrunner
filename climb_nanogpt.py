@@ -10,8 +10,8 @@ import time
 
 from scientist.llm_client import LLMClient
 import scientist.prompts as prompts
-import scientist.shell_utils as shell_utils
-import scientist.fs_utils as fs_utils
+import scientist.utils.shell_utils as shell_utils
+import scientist.utils.fs_utils as fs_utils
 
 
 Serializable = Union[str, int, float, bool, None, Dict[str, "Serializable"], List["Serializable"]]
@@ -82,14 +82,18 @@ class Workspace:
 	def _get_version_path(self, path=''):
 		return os.path.join(self.root_dir, self.version_dir, path)
 
-	def save_to_file(self, text: str, path: str, in_root=False):
-		"""Save text content to a file path in root_dir."""
+	def get_path(self, path='', in_root=False) -> str:
 		if in_root:
-			save_path = path
+			ws_path = self._get_abs_path(path)
 		else:
 			version_dir_path = self._get_version_path()
-			save_path = _get_version_path(path)
+			ws_path = _get_version_path(path)
 
+		return ws_path
+
+	def save_to_file(self, text: str, path: str, in_root=False):
+		"""Save text content to a file path in root_dir."""
+		save_path = self.get_path(path, in_root=in_root)
 		os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
 		with open(save_path, 'w') as fout:
@@ -248,7 +252,7 @@ class NanoGPTClimber(ExperimentRunner):
 		pass
 
 	def run_exp(self):
-		# Observe dir + history, if enabled
+		# See current solution
 		code = self.workspace.view('train_gpt.py')
 
 		# Request next hypothesis
@@ -276,6 +280,7 @@ class NanoGPTClimber(ExperimentRunner):
 			job_name='maui_climber',
 			account='maui',
 			qos='maui_high',
+			working_dir=self.workspace.get_path()
 		)
 
 		# When time-limit exceeded, check for experiment results
