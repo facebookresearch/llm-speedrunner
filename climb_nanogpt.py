@@ -4,11 +4,14 @@ import datetime
 import dataclasses
 import logging
 import os
+import shutil
 import subprocess
+import time
 
 from scientist.llm_client import LLMClient
 import scientist.prompts as prompts
-import scientist.slurm_utils as slurm_utils
+import scientist.shell_utils as shell_utils
+import scientist.fs_utils as fs_utils
 
 
 Serializable = Union[str, int, float, bool, None, Dict[str, "Serializable"], List["Serializable"]]
@@ -43,7 +46,7 @@ class Workspace:
 		- Evaluation metrics per experiment
 	"""
 
-	def __init__(self, root_dir: str, track_history=True):
+	def __init__(self, root_dir: str, cp_dir: Optional[str] = None, track_history=True):
 		self.root_dir: str = root_dir
 
 		if track_history:
@@ -51,7 +54,18 @@ class Workspace:
 		else:
 			self._exp_history = None
 
-		# Find all version directories
+		# Initialize version dirs
+		version_dirs = self._get_version_dirs()
+		if not version_dirs:
+			version_dirs.append(self._get_abs_path('version_0'))
+		self.version_dir: str = version_dirs[-1]
+
+		# Copy files from cp_dir
+		if cp_dir is not None:
+			fs_utils.cp_dir(cp_dir, self.root_dir)
+
+
+	def _get_version_dirs(self) -> list[str]:
 		version_dirs = []
 		pattern = re.compile(r'^version_\d+$')  # Matches 'version_' followed by an integer
 		for dirname in os.listdir(root_path):
@@ -59,47 +73,66 @@ class Workspace:
 		    if os.path.isdir(full_path) and pattern.match(dirname):
 		        version_dirs.append(abs_dir_path)
 
-		if not version_dirs:
-			version_dirs.append(self._get_abs_path('version_0'))
-
-		self.version_dir: str = version_dirs[-1]
+		return version_dirs
 
 	def _get_abs_path(self, path: str):
 		return os.path.join(self.root_dir, path)
 
-	def save_to_file(self, text: str, path: str):
+	def _get_version_path(self, path=''):
+		return os.path.join(self.root_dir, self.version_dir, path)
+
+	def save_to_file(self, text: str, path: str, in_root=False):
 		"""Save text content to a file path in root_dir."""
-		with open(self._get_abs_path(path), 'w') as fout:
+		if in_root:
+			save_path = path
+		else:
+			version_dir_path = self._get_version_path()
+			save_path = _get_version_path(path)
+
+		os.makedirs(os.path.dirname(save_path), exist_ok=True)
+
+		with open(save_path, 'w') as fout:
 			fout.write(str)
 
 	def create_version(self):
 		self.n_versions += 1
 		os.makedirs(self._get_abs_path(f'version_{self.n_versions}'), exist_ok=True)
 
-	def obs(self, parts: list[str]):
-		"""Observe full workspace, or part of it.
-		"""
-		with open('train_gpt.py', 'w') as file_train_py:
-			train_py = file_train_py.read()
-
-		return train_py
-
-	def obs_dir(self, paths: Optional[list[str]] = None):
+	def ls(self, paths: Optional[list[str]] = None):
 		"""Observe contents of working directory.
 	
 		Arguments
-			paths: If set, only observe these paths; otherwise, 
-			observe everything in the root_dir.
+			paths: If set, only view content of these paths; otherwise, 
+			view everything in the root_dir.
 
 		Returns
 			A dictionary mapping paths to contents.
 		"""
 		pass
 
+	def view(self, paths: Optional[list[str] | str] = None, in_root=False) -> str:
+		if paths is None:
+			paths = ['']
+		elif isinstance(paths, str):
+			paths = [paths]
+
+		if in_root:
+			paths = [self._get_abs_path(path) for path in paths]
+		else:
+			paths = [self._get_version_path(path) for path in paths]
+
+		contents = []
+		for path in paths:
+			contents.append(f'# {os.path.relpath(path, self.version_dir)}'):
+			with open(path, 'r') as fin:
+				contents.append(fin.read() + '\n')
+
+		return '\n'.join(contents)
+
 	def exec_cmd(self, cmd: str):
 		return subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
-	def obs_history(
+	def view_history(
 		self, 
 		max_len: Optional[int] = None, 
 		as_diffs=True, 
@@ -215,7 +248,7 @@ class NanoGPTClimber(ExperimentRunner):
 
 	def run_exp(self):
 		# Observe dir + history, if enabled
-		code = self.workspace.obs_dir('train_gpt.py')
+		code = self.workspace.view('train_gpt.py')
 
 		# Request next hypothesis
 		hypothesis = self.run_scientist(
@@ -228,7 +261,7 @@ class NanoGPTClimber(ExperimentRunner):
 			prompt.NANOGPT_TASK_IMPLEMENT_HYPOTHESIS.format(code=code, hypothesis=hypothesis)
 		)
 
-		# Save code to workspace_dir, @todo: add linting
+		# Save code to workspace's current version dir
 		self.workspace.save_to_file(updated_code, 'train_gpt.py')
 
 		# @todo: Launch experiment on slurm cluster + track jobid
@@ -245,7 +278,8 @@ class NanoGPTClimber(ExperimentRunner):
 		)
 
 		# When time-limit exceeded, check for experiment results
-		sleep(self.job_ttl)
+		# @todo: Use slurm_utils.JobObserver to watch for job status and when done, runs callback
+		time.sleep(self.job_ttl)
 		job_out = slurm_utils.get_job_status(job_id)
 		
 		# Parse experiment results @todo: read results from logs
