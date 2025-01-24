@@ -48,6 +48,7 @@ class Workspace:
 
 	def __init__(self, root_dir: str, cp_dir: Optional[str] = None, track_history=True):
 		self.root_dir: str = root_dir
+		os.makedirs(self.root_dir, exist_ok=True)
 
 		if track_history:
 			self._exp_history: ExperimentHistory = ExperimentHistory(records=[])
@@ -293,6 +294,7 @@ class NanoGPTClimber(ExperimentRunner):
 		# Record experiment results in history
 		# - Compute diff from previous code
 		# - Store diffs in code
+		# - Save result file in version_dir
 
 		exp_metrics = dict(
 			val_loss=val_loss,
@@ -307,7 +309,7 @@ def main():
 	preamble = prompts.NANOGPT_CLIMBER_TASK_PREAMBLE
 	scientist = Agent(model='qwen-r1-32b', system_prompt=prompts.SCIENTIST_SYSTEM_PROMPT)
 
-	root_dir = 'nanogpt_workspaces/' + datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+	root_dir = 'workspaces/nanogpt' + datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 	workspace = Workspace(root_dir=root_dir)  # @todo: Should generate a new experiment directory
 
 	exp_config = ExperimentConfig(

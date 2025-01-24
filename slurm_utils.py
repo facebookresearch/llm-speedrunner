@@ -102,3 +102,9 @@ def check_job_status(job_id: str, log_folder: str) -> str | None:
     except Exception as e:
         print(f"Error checking SLURM job status: {e}")
         return None
+
+
+class JobObserver:
+	pass
+
+

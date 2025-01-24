@@ -13,3 +13,5 @@ venv/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+workspaces
