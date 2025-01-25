@@ -31,10 +31,5 @@ class ExperimentRunner:
 
 		return response
 
-	def run_exp(self):
-		raise NotImplementedError()
-
 	def run(self, n_iterations=1):
-		for i in range(n_iterations):
-			self.workspace.create_version()
-			run_exp()
+		raise NotImplementedError()

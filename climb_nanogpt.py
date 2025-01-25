@@ -15,9 +15,9 @@ import scientist.prompts as prompts
 
 
 class NanoGPTClimber(ExperimentRunner):
-	def run_exp(self):
+	def _run_exp(self, version: str):
 		# See current solution
-		code = self.workspace.view('train_gpt.py')
+		code = self.workspace.view('train_gpt.py', version)
 
 		# Request next hypothesis
 		hypothesis = self.run_scientist(
@@ -31,7 +31,7 @@ class NanoGPTClimber(ExperimentRunner):
 		)
 
 		# Save code to workspace's current version dir
-		self.workspace.save_to_file(updated_code, 'train_gpt.py')
+		self.workspace.save_to_file(updated_code, 'train_gpt.py', version=version)
 
 		# @todo: Launch experiment on slurm cluster + track jobid
 		# @todo: bwrap the command
@@ -45,7 +45,7 @@ class NanoGPTClimber(ExperimentRunner):
 			job_name='maui_climber',
 			account='maui',
 			qos='maui_high',
-			working_dir=self.workspace.get_path()
+			working_dir=self.workspace.resolve_path(version=version)
 		)
 
 		# When time-limit exceeded, check for experiment results
@@ -72,6 +72,15 @@ class NanoGPTClimber(ExperimentRunner):
 			walltime=walltime
 		)
 		pass
+
+	def run(self, n_iterations=1):
+		for i in range(n_iterations):
+			if i > 0:
+				prev_version = str(i - 1)
+				version = self.workspace.create_version(form_version=prev_version)
+			else:
+				version = '0'
+			self._run_exp(version=version)
 
 
 def main():

@@ -34,6 +34,7 @@ class Workspace:
 		create_version(from_path=template_dir)
 
 		# Copy files from cp_dir
+		self.template_dir = template_dir
 		if template_dir is not None:
 			fs_utils.cp_dir(template_dir, 
 				self.resolve_path(version=str(self.n_versions))
@@ -88,6 +89,8 @@ class Workspace:
 			src_path = fs_utils.expand_path(from_path)
 		elif from_version is not None:
 			src_path = self.resolve_path(version=self._get_version_dirname(from_version))
+		else:
+			src_path = fs_utils.expand_path(self.template_dir)
 
 		fs_utils.cp_dir(src_path, new_version_dir_path)
 
@@ -127,6 +130,10 @@ class Workspace:
 
 	    abs_paths = [self.resolve_path(path, version=version) for path in paths]
 	    all_files = {}
+
+	    for abs_path in abs_paths:
+	    	if not os.path.exists(abs_path):
+	    		raise ValueError(f'Path {abs_path} does not exist')
 
 	    if recursive:
 	        for path in abs_paths:
