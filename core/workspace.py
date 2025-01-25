@@ -1,8 +1,8 @@
 from typing import Optional, Union, Type
 
-import datetime
 import dataclasses
 import logging
+import json
 import os
 import re
 import shutil
@@ -85,13 +85,19 @@ class Workspace:
     ):
         """Create new version directory, copying all contents in from_path."""
         self.n_versions += 1
-        new_version_dir_path = self.resolve_path(version=(str(self.n_versions)))
+        new_version = str(self.n_versions)
+        new_version_dir_path = self.resolve_path(version=new_version)
 
         os.makedirs(new_version_dir_path, exist_ok=True)
         if from_path is not None:
             src_path = fs_utils.expand_path(from_path)
         elif from_version is not None:
             src_path = self.resolve_path(version=from_version)
+
+            # Add a meta.json file with parent info to new version
+            metadata = dict(parent=from_version, created_at=int(time.time()))
+            self.save_to_file(json.dumps(metadata), path='meta.json', version=from_version)
+
         elif self.template_dir is not None:
             src_path = fs_utils.expand_path(self.template_dir)
 

@@ -17,12 +17,16 @@ from utils import fs_utils
 import prompts
 
 
+def parse_nanogpt_logs(path: str):
+	pass
+
+
 class NanoGPTClimber(ExperimentRunner):
 	def _run_exp(self, version: str):
 		# See current solution
 		code = self.workspace.view('train_gpt.py', version=version)
 
-		# @todo: Read perf file
+		# @todo: Read performance and summary from results.json
 
 		# Request next hypothesis
 		hypothesis_res = self.run_scientist(
@@ -60,18 +64,13 @@ class NanoGPTClimber(ExperimentRunner):
 		# time.sleep(self.job_ttl)
 		# job_out = slurm_utils.get_job_status(job_id)
 		
-		# # Parse experiment results @todo: read results from logs
+		# # Parse experiment results @todo: read results from logs + save in results.json
 		# fitness = 0
 		# if job_out:
 		# 	try:
 		# 		fitness = 1
 		# 	except:
 		# 		pass
-
-		# # Record experiment results in history
-		# # - Compute diff from previous code
-		# # - Store diffs in code
-		# # - Save result file in version_dir
 
 		# exp_metrics = dict(
 		# 	val_loss=val_loss,

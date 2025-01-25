@@ -108,6 +108,14 @@ def check_job_status(job_id: str, log_folder: str) -> str | None:
         return None
 
 
+def get_log_out(job_id: str):
+    pass
+
+
+def get_log_err(job_id: str):
+    pass
+
+
 class JobObserver:
 	pass
 

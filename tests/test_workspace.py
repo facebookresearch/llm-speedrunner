@@ -1,7 +1,8 @@
+from unittest.mock import patch, MagicMock
+import json
 import os
 import pytest
 import shutil
-from unittest.mock import patch, MagicMock
 
 from scientist.core.types import ExperimentConfig, ExperimentRecord, ExperimentHistory
 from scientist.core.workspace import Workspace
@@ -144,10 +145,19 @@ class TestNewWorkspace:
         check_files_with_contents_exist(file_contents)
 
     def test_create_version_from_version(self):
-        self.workspace.create_version(from_version='1')
+        parent_version = '1'
+        self.workspace.create_version(from_version=parent_version)
         version = str(self.workspace.n_versions)
         version_path = self.workspace.resolve_path(version=version)
         assert os.path.exists(version_path)
+
+        metadata_path = self.workspace.resolve_path('meta.json', version=parent_version)
+        assert os.path.exists(metadata_path)
+
+        with open(metadata_path, 'r') as f:
+            metadata = json.loads(f.read())
+            assert metadata['parent'] == parent_version
+            assert 'created_at' in metadata
 
         rel_file_contents = {**self.template_contents, 'hello.txt': 'hello world v1'}
 
