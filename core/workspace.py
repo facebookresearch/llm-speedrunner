@@ -9,8 +9,8 @@ import shutil
 import subprocess
 import time
 
-from scientist.core.types import ExperimentRecord, ExperimentHistory, ExperimentConfig
-from scientist.utils import fs_utils
+from core.types import ExperimentRecord, ExperimentHistory, ExperimentConfig
+from utils import fs_utils
 
 
 class Workspace:
@@ -31,12 +31,13 @@ class Workspace:
             self._exp_history = None
 
         # Initialize version dirs
+        self.template_dir = template_dir
+
         version_dirs = self._get_version_dirs()
         self.n_versions = len(version_dirs)
         self.create_version(from_path=template_dir)
 
         # Copy files from cp_dir
-        self.template_dir = template_dir
         if template_dir is not None:
             fs_utils.cp_dir(template_dir, 
                 self.resolve_path(version=str(self.n_versions))
@@ -91,10 +92,13 @@ class Workspace:
             src_path = fs_utils.expand_path(from_path)
         elif from_version is not None:
             src_path = self.resolve_path(version=from_version)
-        else:
+        elif self.template_dir is not None:
             src_path = fs_utils.expand_path(self.template_dir)
 
-        fs_utils.cp_dir(src_path, new_version_dir_path)
+        if src_path is not None:
+            fs_utils.cp_dir(src_path, new_version_dir_path)
+
+        return self.n_versions
 
     def ls(self, path = ''):
         """List all files and directories at a path"""

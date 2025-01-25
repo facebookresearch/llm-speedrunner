@@ -1,4 +1,7 @@
+from typing import Optional
+import json
 import asyncio
+
 
 from openai import OpenAI
 
@@ -10,7 +13,7 @@ server_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
 # @todo: Support asyncio
 # @todo: Support <thinking/>
 class LLMClient:
-	def __init__(model='qwen-r1-32b', system_prompt=Optional[str] = None):
+	def __init__(self, model='qwen-r1-32b', system_prompt: Optional[str] = None):
 		self.model = model
 		self.system_prompt = system_prompt
 
@@ -26,4 +29,6 @@ class LLMClient:
 		#     {"role": "user", "content": prompt}
 		#   ]
 		# )
-		completion = 'testing'
+		completion = json.dumps(dict(hypothesis='new hypothesis'))
+
+		return completion

@@ -1,12 +1,12 @@
 from typing import Optional, Type
-
+import json
 
 # Validators
 def validate_json(x: str, type_dict: Optional[dict[str, Type]] = None) -> bool:
 	data = None
 
 	try:
-		json.loads(x)
+		data = json.loads(x)
 	except:
 		return False
 

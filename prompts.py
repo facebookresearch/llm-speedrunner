@@ -15,10 +15,10 @@ Next, come up with a hypothesis for how you can improve this code in order to ac
 
 Structure your response as a JSON in this format. Do not include any extra commentary in your response.
 
-{
+{{
 	"summary": Summary of the current implementation,
 	"hypothesis": Hypothesis for improving the implementation
-}
+}}
 """
 
 
