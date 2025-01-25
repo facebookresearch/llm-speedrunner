@@ -7,11 +7,15 @@ __pycache__/
 *.pyo
 *.pyd
 
+# pytest
+.pytest_cache
+
 # Virtual environments
 venv/
 .env/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
 
 workspaces

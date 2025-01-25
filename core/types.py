@@ -1,4 +1,5 @@
 from typing import Optional, Union
+import dataclasses
 
 
 Serializable = Union[str, int, float, bool, None, dict[str, "Serializable"], list["Serializable"]]
@@ -10,13 +11,13 @@ class ExperimentRecord:
 	metrics: dict[str, Serializable]
 
 
-@dataclass.dataclass
+@dataclasses.dataclass
 class ExperimentHistory:
 	records: list[ExperimentRecord]
 
 
-@dataclass.dataclass
-class ExperimentConfig
+@dataclasses.dataclass
+class ExperimentConfig:
 	preamble: str
 	job_ttl: int
 	max_retries: int = 3

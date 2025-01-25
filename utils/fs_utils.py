@@ -4,7 +4,7 @@ import shutil
 
 def expand_path(path: str) -> str:
     """Expands path into an absolute path."""
-    return = os.path.abspath(os.path.expanduser(path))
+    return os.path.abspath(os.path.expanduser(path))
 
 
 def cp_dir(src_dir: str, target_dir: str):
