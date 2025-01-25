@@ -1,6 +1,12 @@
 import os
 import shutil
 
+
+def expand_path(path: str) -> str:
+    """Expands path into an absolute path."""
+    return = os.path.abspath(os.path.expanduser(path))
+
+
 def cp_dir(src_dir: str, target_dir: str):
     """
     Copies all files and directories from the source directory to the target directory,
