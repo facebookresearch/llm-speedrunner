@@ -1,13 +1,15 @@
 from typing import Optional
-import asyncio
 import json
 import re
-import sys
 
 from openai import OpenAI
 
 
-def strip_think_tokens(text: str):
+node_id = "cr1-h100-p548xlarge-267"
+server_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
+
+
+def remove_think_tokens(text: str):
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
 
 
@@ -20,9 +22,8 @@ class LLMClient:
         """
         self.model_url = model_url
         self._client = OpenAI(
-            base_url=model_url,
+            base_url=server_url,
             api_key="token-abc123",
-            timeout=30*60, # 30 min timeout since we are <thinking/>
         )
 
     def generate(
@@ -40,40 +41,18 @@ class LLMClient:
 
         """
         if system_prompt:
-            messages = [{"role": "system", "content": system_prompt}]
+            messages = [{"role": "system", "content": self.system_prompt}]
         else:
             messages = []
         messages.append({"role": "user", "content": prompt})
         
-        completion = self._client.chat.completions.create(
+        completion = client.chat.completions.create(
           model="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
           messages=messages
         )
+        # completion = json.dumps(dict(hypothesis='new hypothesis'))
 
-        res_content = completion.choices[0].message.content
+        if not self.show_thinking:
+            completion = strip_thinking_tokens(completion).strip()
 
-        if not show_thinking:
-            final_res = strip_think_tokens(res_content).strip()
-
-        return final_res
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python llm_client.py <vllm server node_id> <prompt>")
-        sys.exit(1)
-
-    node_id = sys.argv[1]
-    model_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
-    print(f'model_url={model_url}')
-
-    llm = LLMClient(model_url=model_url)
-
-    prompt = sys.argv[2]
-    res = llm.generate(
-        prompt, 
-        system_prompt='You are a standup comedian and always present your answers as some kind of joke.', 
-        show_thinking=False
-    )
-
-    print(res)
+        return completion

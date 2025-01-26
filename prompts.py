@@ -64,9 +64,9 @@ Make sure your code changes preserve these aspects of train_gpt.py:
 - The script continues to be runnable via simply calling `python train_gpt.py`.
 - Do NOT change the value of train_files, val_files, or val_token values in the Hyperparameters config used to set the training args.
 - Make sure these hyperparameters are always set to these values:
-	train_files: "data/fineweb10B/fineweb_train_*.bin"
-	val_files: "data/fineweb10B/fineweb_val_*.bin"
-	val_tokens = 10485760
+	train_files: {train_files}
+	val_files: {val_files}
+	val_tokens = {val_tokens}
 - Always keep save_checkpoint set to False in the training args.
 - Keep all print0 statements as is. Do not change the arguments used in the curent print0 statements, so that logging format is preserved.
 

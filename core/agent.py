@@ -5,7 +5,7 @@ from .llm_client import LLMClient
 
 class Agent:
 	def __init__(self, model="gpt-4o", system_prompt: Optional[str] = None):
-		self.llm = LLMClient(model=model, system_prompt=system_prompt)
+		self.llm = LLMClient(model=model)
 
 	def act(self, instruction: str, validator: Optional[Callable[str, bool]], max_retries=1) -> str:
 		response = self.llm.generate(instruction)
@@ -13,7 +13,7 @@ class Agent:
 		if validator and not validator(response):
 			n_retries = 0
 			while n_retries < max_retries:
-				response = LLMClient.generate(instruction)
+				response = LLMClient.generate(instruction, system_prompt=system_prompt)
 
 				n_retries += 1
 

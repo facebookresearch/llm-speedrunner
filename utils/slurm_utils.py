@@ -174,6 +174,7 @@ def submit_job(
     working_dir: str = '.',
     log_dir='submitit_logs',
     bwrap=True,
+    env_vars: Optional[dict[str, str]] = None
 ):
     """
     Launches a SLURM job using submitit with the specified arguments.
@@ -242,6 +243,10 @@ def submit_job(
         print(f"WORLD_SIZE: {os.environ['WORLD_SIZE']}")
         print(f"RANK: {os.environ['RANK']}")
 
+        if env_vars:
+            for k,v in env_vars.items():
+                os.environ[k] = str(v)
+
         # Only run the `torchrun` command on rank 0
         rank = int(os.environ["RANK"])
         if rank == 0:
@@ -285,16 +290,35 @@ async def main():
         print('\nmetrics:')
         print(metrics)
 
+    NANOGPT_ENV_VARS = {
+        'NANOGPT_TRAIN_FILES': '/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_train_*.bin',
+        'NANOGPT_VAL_FILES': '/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_val_*.bin',
+        'NANOGPT_VAL_TOKENS': 10485760
+    }
+
+    # job = submit_job(
+    #     command='test.py', 
+    #     nodes=1, 
+    #     gpus_per_node=1, 
+    #     cpus_per_task=8, 
+    #     tasks_per_node=1, 
+    #     timeout_min=10,
+    #     job_name='test_slurm',
+    #     account='maui',
+    #     working_dir='.'
+    # )
+
     job = submit_job(
-        command='test.py', 
-        nodes=1, 
-        gpus_per_node=1, 
-        cpus_per_task=8, 
-        tasks_per_node=1, 
-        timeout_min=10,
-        job_name='test_slurm',
+        command='train_gpt.py', 
+        job_name='nanogpt',
+        nodes=1,
+        cpus_per_task=12,
+        gpus_per_node=8,
+        tasks_per_node=8,
+        timeout_min=60,
         account='maui',
-        working_dir='.'
+        working_dir='workspace/v_0',
+        env_vars=NANOGPT_ENV_VARS,
     )
 
     JobObserver.shared.observe(

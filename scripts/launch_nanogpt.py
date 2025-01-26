@@ -114,8 +114,7 @@ if __name__ == '__main__':
         cpus_per_task=12,
         gpus_per_node=8,
         tasks_per_node=8,
-        gpu_mem=40,
         timeout_min=60,
         account='maui',
-        qos='maui_high',
+        # qos='maui_high',
     )

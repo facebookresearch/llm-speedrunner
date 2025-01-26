@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 
 from core.types import ExperimentConfig
@@ -16,7 +17,15 @@ from core.agent import Agent
 from core import validators
 from utils import fs_utils
 from utils import slurm_utils
+from utils import code_utils
 import prompts
+
+
+NANOGPT_ENV_VARS = {
+	'NANOGPT_TRAIN_FILES': '/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_train_*.bin',
+	'NANOGPT_VAL_FILES': '/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_val_*.bin',
+	'NANOGPT_VAL_TOKENS': 10485760
+}
 
 
 class NanoGPTClimber(ExperimentRunner):
@@ -33,9 +42,17 @@ class NanoGPTClimber(ExperimentRunner):
 		hypothesis = json.loads(hypothesis_res)['hypothesis']
 
 		# Implement hypothesis
-		updated_code = self.run_scientist(
-			prompts.NANOGPT_TASK_IMPLEMENT_HYPOTHESIS.format(code=code, hypothesis=hypothesis)
+		updated_code_response = self.run_scientist(
+			prompts.NANOGPT_TASK_IMPLEMENT_HYPOTHESIS.format(
+				code=code, 
+				hypothesis=hypothesis,
+				train_files=TRAIN_FILES,
+				val_files=VAL_FILES,
+				val_tokens=VAL_TOKENS,
+			)
+			validator=validators.validate_code,
 		)
+		updated_code = code_utils.extract_code(updated_code_response, strict=False)
 
 		# Save code to workspace's current version dir
 		self.workspace.save_to_file(updated_code, 'train_gpt.py', version=version)
@@ -44,13 +61,14 @@ class NanoGPTClimber(ExperimentRunner):
 		job = slurm_utils.submit_job(
 			command='train_gpt.py', 
 			nodes=1, 
+			tasks_per_node=8,
 			gpus_per_node=8, 
-			cpus_per_task=96, 
-			tasks_per_node=1, 
+			cpus_per_task=12,
 			timeout_min=self.job_ttl,
-			job_name='maui_climber',
+			job_name='nanogpt',
 			account='maui',
-			working_dir=self.workspace.resolve_path(version=version)
+			working_dir=self.workspace.resolve_path(version=version),
+			env_vars=NANOGPT_ENV_VARS,
 		)
 
 		# Monitor experiment status and bookkeep final outcome
@@ -117,15 +135,21 @@ class NanoGPTClimber(ExperimentRunner):
 
 async def main():
 	# Create scientist agent
-	preamble = prompts.NANOGPT_TASK_PREAMBLE
-	scientist = Agent(model='qwen-r1-32b', system_prompt=prompts.SCIENTIST_SYSTEM_PROMPT)
+	# node_id = "cr1-h100-p548xlarge-267"
+	if len(sys.argv) != 2:
+	    print("Usage: python climb_nanogpt.py <vllm server node_id>")
+	    sys.exit(1)
+
+	node_id = sys.argv[1]
+	model_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
+	scientist = Agent(model_url=model_url, system_prompt=prompts.SCIENTIST_SYSTEM_PROMPT)
 
 	root_path = 'workspaces/nanogpt' + f'_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}'
 	template_dir = 'workspace_templates/nanogpt'
 	workspace = Workspace(root_path=root_path, template_dir=template_dir)
 
 	exp_config = ExperimentConfig(
-		preamble=preamble,
+		preamble=prompts.NANOGPT_TASK_PREAMBLE,
 		job_ttl=1*60  # 1 hour
 	)
 
