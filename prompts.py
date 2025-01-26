@@ -68,9 +68,9 @@ Make sure your code changes preserve these aspects of train_gpt.py:
 	val_files: {val_files}
 	val_tokens = {val_tokens}
 - Always keep save_checkpoint set to False in the training args.
-- Keep all print0 statements as is. Do not change the arguments used in the curent print0 statements, so that logging format is preserved.
+- Keep all print0 statements the same. Do not change the arguments used in the current print0 statements, so to ensure the logging format is preserved.
 
 If you violate any of the above constraints, the experiment run will be invalid.
 
-Respond with only the fully-functional updated code, which implements ideas in the hypothesis above, without any extra commentary.
+Respond with only the fully-functional updated code, which implements ideas in the hypothesis above, without any extra commentary. This updated code should be comprehensive of the ideas for improving the code discussed above.
 """
