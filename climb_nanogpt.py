@@ -27,7 +27,9 @@ NANOGPT_ENV_VARS = {
 	'NANOGPT_VAL_TOKENS': 10485760
 }
 
-ENTRY_FILENAME = 'train_gpt.py'
+ENTRY_FILENAME = 'collatz.py'
+
+MAX_LOG_LEN = 3000
 
 
 class NanoGPTClimber(ExperimentRunner):
@@ -60,29 +62,29 @@ class NanoGPTClimber(ExperimentRunner):
 		self.workspace.save_to_file(updated_code, ENTRY_FILENAME, version=version)
 
 		# Send experiment to slurm
-		job = slurm_utils.submit_job(
-			command=ENTRY_FILENAME, 
-			nodes=1, 
-			tasks_per_node=8,
-			gpus_per_node=8, 
-			cpus_per_task=12,
-			timeout_min=self.job_ttl,
-			job_name='nanogpt',
-			account='maui',
-			working_dir=self.workspace.resolve_path(version=version),
-			env_vars=NANOGPT_ENV_VARS,
-		)
 		# job = slurm_utils.submit_job(
 		# 	command=ENTRY_FILENAME, 
 		# 	nodes=1, 
-		# 	tasks_per_node=1,
-		# 	gpus_per_node=0, 
+		# 	tasks_per_node=8,
+		# 	gpus_per_node=8, 
 		# 	cpus_per_task=12,
 		# 	timeout_min=self.job_ttl,
-		# 	job_name='test',
+		# 	job_name='nanogpt',
 		# 	account='maui',
 		# 	working_dir=self.workspace.resolve_path(version=version),
+		# 	env_vars=NANOGPT_ENV_VARS,
 		# )
+		job = slurm_utils.submit_job(
+			command=ENTRY_FILENAME, 
+			nodes=1, 
+			tasks_per_node=1,
+			gpus_per_node=0, 
+			cpus_per_task=12,
+			timeout_min=self.job_ttl,
+			job_name='test',
+			account='maui',
+			working_dir=self.workspace.resolve_path(version=version),
+		)
 
 		# Monitor experiment status and bookkeep final outcome
 		slurm_utils.JobObserver.shared.observe(
@@ -98,8 +100,8 @@ class NanoGPTClimber(ExperimentRunner):
 		self.scientist.flush_logs(self.workspace.resolve_path('llm_history.jsonl', version=version))
 
 	def set_results_for_version(self, version: str, job_results: slurm_utils.JobResult):
-		log_out = job_results.log_out[0]
-		log_err = job_results.log_err[0]
+		log_out = job_results.log_out[0][-MAX_LOG_LEN:]
+		log_err = job_results.log_err[0][-MAX_LOG_LEN:]
 		outcome_summary = self.run_scientist(
 			prompts.SUMMARIZE_LOGS_PROMPT.format(log_out, log_err)
 		)
@@ -163,13 +165,16 @@ async def main():
 		log_llm_metrics=True
 	)
 
-	root_path = 'workspaces/nanogpt' + f'_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}'
-	template_dir = 'workspace_templates/nanogpt'
+	# root_path = 'workspaces/nanogpt' + f'_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}'
+	# template_dir = 'workspace_templates/nanogpt'
+	root_path = 'workspaces/collatz' + f'_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}'
+	template_dir = 'workspace_templates/collatz'
 	workspace = Workspace(root_path=root_path, template_dir=template_dir)
 
 	exp_config = ExperimentConfig(
 		preamble=prompts.NANOGPT_TASK_PREAMBLE,
-		job_ttl=1*60  # 1 hour
+		# job_ttl=1*60  # 1 hour
+		job_ttl=2 # 2 minutes
 	)
 
 	climber = NanoGPTClimber(config=exp_config, workspace=workspace, scientist=scientist)

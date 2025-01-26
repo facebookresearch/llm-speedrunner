@@ -1,5 +1,5 @@
 {	
-	"job_status": "success",
+	"job_status": "COMPLETED",
 	"metrics": {
 		"n_steps": 1393,
 		"val_loss": 3.2789,
