@@ -3,7 +3,7 @@
 	"metrics": {
 		"n_steps": 1393,
 		"val_loss": 3.2789,
-		"runtime": 192959,
+		"train_time": 192959,
 	},
 	"hypothesis": "The following changes will result in faster training performance without hurting training loss on the first 0.8B tokens of FineWeb: merged QKV weights, long-short attention, attention scale, lower Adam epsilon, batched Muon.",
 	"outcome_summary": "These changes led to the new world-record fastest nanogpt training, resulting in a validation loss of 3.2789 in 3.21 minutes, reaching under the 3.28 target validation loss."

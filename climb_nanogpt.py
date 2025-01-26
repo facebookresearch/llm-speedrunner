@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional, Type
+from typing import Optional, Type, Union
+import asyncio
 import dataclasses
 import logging
 import json
@@ -22,11 +23,11 @@ class NanoGPTClimber(ExperimentRunner):
 	async def _run_exp(self, version: str):
 		# See current solution
 		code = self.workspace.view('train_gpt.py', version=version)
-		results = json.loads(self.workspace.view('results.json', version=version))
+		summary = json.loads(self.workspace.view('results.json', version=version))
 
 		# Request next hypothesis
 		hypothesis_res = self.run_scientist(
-			prompts.NANOGPT_TASK_GENERATE_HYPOTHESIS.format(code=code, results=results),
+			prompts.NANOGPT_TASK_GENERATE_HYPOTHESIS.format(code=code, summary=summary),
 			validator=lambda x: validators.validate_json(x, dict(hypothesis=str)),
 		)
 		hypothesis = json.loads(hypothesis_res)['hypothesis']
@@ -39,23 +40,24 @@ class NanoGPTClimber(ExperimentRunner):
 		# Save code to workspace's current version dir
 		self.workspace.save_to_file(updated_code, 'train_gpt.py', version=version)
 
-		# Launch and observe the job 
-		job = slurm_utils.launch_job(
-			command="train_gpt.py",
-			bwrap=True, 
-			n_nodes=1, 
+		# Send experiment to slurm
+		job = slurm_utils.submit_job(
+			command='train_gpt.py', 
+			nodes=1, 
 			gpus_per_node=8, 
 			cpus_per_task=96, 
 			tasks_per_node=1, 
 			timeout_min=self.job_ttl,
 			job_name='maui_climber',
 			account='maui',
-			qos='maui_high',
 			working_dir=self.workspace.resolve_path(version=version)
 		)
 
+		# Monitor experiment status and bookkeep final outcome
 		slurm_utils.JobObserver.shared.observe(
-			job.id,
+			job=job.id,
+			metadata={'hypothesis': hypothesis},
+			log_dir=os.path.join(self.workspace.resolve_path(version=version), 'submitit_logs'),
 			callback=lambda res: self.set_results_for_version(version, res),
 		)
 
@@ -63,25 +65,28 @@ class NanoGPTClimber(ExperimentRunner):
 		await slurm.utils.JobObserver.shared.wait()
 
 	def set_results_for_version(self, version: str, job_results: slurm_utils.JobResult):
-		log_out = slurm_utils.get_logs_out(job_results.job_id, n=1)
-		log_err = slurm_utils.get_logs_err(job_results.job_id, n=1)
-		summary_response = self.run_scientist(
-			prompts.SUMMARIZE_EXPERIMENT_LOGS.format(log_out, log_err),
-			validator=lambda x: validators.validate_json(x, dict={})
+		log_out = job_results.log_out[0]
+		log_err = job_results.log_err[0]
+		outcome_summary = self.run_scientist(
+			prompts.SUMMARIZE_LOGS_PROMPT.format(log_out, log_err)
 		)
-		outcome_summary = json.loads(summary_response)['summary']
 
 		# Parse metrics from log file
 		metrics = {}
-		exp_logs_path = ... # @todo: find logs/<hash>.txt
-		with open(exp_logs_path, 'r') as f:
-			# @todo: Read file line by line and get last line with metrics
-			pass
+		matches = re.findall(r"step:(\d+)(?:/\d+)?\s+val_loss:([\d.]+)\s+train_time:(\d+)ms", log_out)
+		if matches:
+		    # Take the last match
+		    last_match = matches[-1]
+		    metrics = {
+		        "n_steps": int(last_match[0]),
+		        "val_loss": float(last_match[1]),
+		        "train_time": int(last_match[2])
+		    }
 
 		if not metrics:
-			metric_types = {k: type(v) for k, v in results.get('metrics', {}).items()}
+			metric_types = {k: Union[type(v), None] for k, v in results.get('metrics', {}).items()}
 			metrics_response = self.run_scientist(
-				prompts.SUMMARIZE_EXPERIMENT_LOGS.format(log_out, log_err),
+				prompts.PARSE_METRICS.format(text=log_out, metric_types=json.dumps(metric_types)),
 				validator=lambda x: validators.validate_json(x, metric_types)
 			)
 			metrics = json.loads(metrics_response)
@@ -90,12 +95,15 @@ class NanoGPTClimber(ExperimentRunner):
 		if not metrics:
 			metrics = {k: None for k, _ in results.get('metrics', {}).items()}
 
-		res = {
-			'status': job_results.status
+		job_results = {
+			'status': job_results.status.value
 			'metrics': metrics,
 			'hypothesis': job_results.metadata['hypothesis'],
 			'outcome_summary': outcome_summary
 		}
+
+		self.workspace.save_to_file(json.dumps(job_results), 'results.json', version=version)
+
 
 	async def run(self, n_iterations=1):
 		for i in range(n_iterations):
@@ -104,10 +112,10 @@ class NanoGPTClimber(ExperimentRunner):
 				version = self.workspace.create_version(from_version=prev_version)
 			else:
 				version = '1'
-			self._run_exp(version=version)
+			await self._run_exp(version=version)
 
 
-def main():
+async def main():
 	# Create scientist agent
 	preamble = prompts.NANOGPT_TASK_PREAMBLE
 	scientist = Agent(model='qwen-r1-32b', system_prompt=prompts.SCIENTIST_SYSTEM_PROMPT)
@@ -118,13 +126,13 @@ def main():
 
 	exp_config = ExperimentConfig(
 		preamble=preamble,
-		job_ttl=10*60  # seconds
+		job_ttl=1*60  # 1 hour
 	)
 
 	climber = NanoGPTClimber(config=exp_config, workspace=workspace, scientist=scientist)
 
-	climber.run(n_iterations=10)
+	await climber.run(n_iterations=10)
 
 
 if __name__ == '__main__':
-	main()
+	asyncio.run(main())
