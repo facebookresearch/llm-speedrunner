@@ -37,5 +37,5 @@ class ExperimentRunner:
 
 		return response
 
-	def run(self, n_iterations=1):
+	async def run(self, n_iterations=1):
 		raise NotImplementedError()

@@ -1,5 +1,11 @@
+from enum import Enum
+
+import asyncio
+import dataclasses
+import re
 import submitit
 import subprocess
+
 
 def launch_job(
     command: str,
@@ -62,61 +68,47 @@ def launch_job(
     return job.job_id
 
 
-def check_job_status(job_id: str, log_folder: str) -> str | None:
-    """
-    Checks if a given SLURM job is completed. If completed, retrieves the .out file contents.
-    
-    Args:
-        job_id (str): The SLURM job ID to check.
-        log_folder (str): The path to the logs folder where the .out file is stored.
-
-    Returns:
-        str | None: The contents of the .out file if the job is completed, otherwise None.
-    """
-    try:
-        # Use `sacct` to query the job status
-        result = subprocess.run(
-            ["sacct", "-j", job_id, "--format=JobID,State", "--noheader"],
-            capture_output=True,
-            text=True,
-        )
-
-        if result.returncode != 0:
-            raise RuntimeError(f"sacct command failed: {result.stderr}")
-
-        # Parse job state from the command output
-        output = result.stdout.strip()
-        if not output:
-            print(f"Job {job_id} not found. It may still be in the queue.")
-            return None
-
-        job_status = output.split()[1]  # Second column is the state (e.g., COMPLETED, FAILED)
-        if job_status in {"COMPLETED", "FAILED", "CANCELLED"}:
-            # Job is finished; retrieve the .out file
-            log_file = os.path.join(log_folder, f"{job_id}.out")
-            if log_file.exists():
-                return log_file.read_text()
-            else:
-                print(f"Log file {log_file} not found.")
-                return None
-
-        print(f"Job {job_id} is not completed yet. Current state: {job_status}")
-        return None
-
-    except Exception as e:
-        print(f"Error checking SLURM job status: {e}")
-        return None
+class JobStatus(Enum):
+    MISSING = 'missing'
+    RUNNING = 'running'
+    FAILURE = 'failure'
+    SUCCESS = 'success'
 
 
-def get_log_out(job_id: str):
-    pass
-
-
-def get_log_err(job_id: str):
-    pass
+@dataclasses.dataclass
+class JobResult:
+    status: JobStatus
+    log_out: str
+    log_err: str
 
 
 class JobObserver:
-	pass
+    def __init__(self):
+        """Manages a pool of asyncio tasks for observing submitit job status."""
 
+    def observe(
+        self,
+        job: submitit.Job,
+        log_dir: str,
+        callback: Callable[JobResult],
+    ):
+        """Observe the status of a slurm job, and execute callback when finished.
+
+        Args:
+            job_id (str): SLURM job ID to check.
+            callback (Callable[JobResult]): Called after job finishes.
+        """
+        pass
+
+    async def wait(self):
+        """Returns only when all pending jobs and their callbacks complete execution."""
+        pass
+
+
+def get_logs_out(job_id: str):
+    pass
+
+
+def get_logs_err(job_id: str):
+    pass
 

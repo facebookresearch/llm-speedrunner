@@ -14,27 +14,22 @@ from core.workspace import Workspace
 from core.agent import Agent
 from core import validators
 from utils import fs_utils
+from utils import slurm_utils
 import prompts
 
 
-def parse_nanogpt_logs(path: str):
-	pass
-
-
 class NanoGPTClimber(ExperimentRunner):
-	def _run_exp(self, version: str):
+	async def _run_exp(self, version: str):
 		# See current solution
 		code = self.workspace.view('train_gpt.py', version=version)
-
-		# @todo: Read performance and summary from results.json
+		results = json.loads(self.workspace.view('results.json', version=version))
 
 		# Request next hypothesis
 		hypothesis_res = self.run_scientist(
-			prompts.NANOGPT_TASK_GENERATE_HYPOTHESIS.format(code=code),
+			prompts.NANOGPT_TASK_GENERATE_HYPOTHESIS.format(code=code, results=results),
 			validator=lambda x: validators.validate_json(x, dict(hypothesis=str)),
 		)
 		hypothesis = json.loads(hypothesis_res)['hypothesis']
-
 
 		# Implement hypothesis
 		updated_code = self.run_scientist(
@@ -44,41 +39,65 @@ class NanoGPTClimber(ExperimentRunner):
 		# Save code to workspace's current version dir
 		self.workspace.save_to_file(updated_code, 'train_gpt.py', version=version)
 
-		# # @todo: Launch experiment on slurm cluster + track jobid
-		# # @todo: bwrap the command
-		# job_id = slurm_utils.launch_job(
-		# 	command="train_gpt.py", 
-		# 	n_nodes=1, 
-		# 	gpus_per_node=8, 
-		# 	cpus_per_task=96, 
-		# 	tasks_per_node=1, 
-		# 	timeout_min=self.job_ttl,
-		# 	job_name='maui_climber',
-		# 	account='maui',
-		# 	qos='maui_high',
-		# 	working_dir=self.workspace.resolve_path(version=version)
-		# )
+		# Launch and observe the job 
+		job = slurm_utils.launch_job(
+			command="train_gpt.py",
+			bwrap=True, 
+			n_nodes=1, 
+			gpus_per_node=8, 
+			cpus_per_task=96, 
+			tasks_per_node=1, 
+			timeout_min=self.job_ttl,
+			job_name='maui_climber',
+			account='maui',
+			qos='maui_high',
+			working_dir=self.workspace.resolve_path(version=version)
+		)
 
-		# # When time-limit exceeded, check for experiment results
-		# # @todo: Use slurm_utils.JobObserver to watch for job status and when done, runs callback
-		# time.sleep(self.job_ttl)
-		# job_out = slurm_utils.get_job_status(job_id)
-		
-		# # Parse experiment results @todo: read results from logs + save in results.json
-		# fitness = 0
-		# if job_out:
-		# 	try:
-		# 		fitness = 1
-		# 	except:
-		# 		pass
+		slurm_utils.JobObserver.shared.observe(
+			job.id,
+			callback=lambda res: self.set_results_for_version(version, res),
+		)
 
-		# exp_metrics = dict(
-		# 	val_loss=val_loss,
-		# 	train_loss=train_loss,
-		# 	walltime=walltime
-		# )
+		# Wait for current experiment and callbacks to finish
+		await slurm.utils.JobObserver.shared.wait()
 
-	def run(self, n_iterations=1):
+	def set_results_for_version(self, version: str, job_results: slurm_utils.JobResult):
+		log_out = slurm_utils.get_logs_out(job_results.job_id, n=1)
+		log_err = slurm_utils.get_logs_err(job_results.job_id, n=1)
+		summary_response = self.run_scientist(
+			prompts.SUMMARIZE_EXPERIMENT_LOGS.format(log_out, log_err),
+			validator=lambda x: validators.validate_json(x, dict={})
+		)
+		outcome_summary = json.loads(summary_response)['summary']
+
+		# Parse metrics from log file
+		metrics = {}
+		exp_logs_path = ... # @todo: find logs/<hash>.txt
+		with open(exp_logs_path, 'r') as f:
+			# @todo: Read file line by line and get last line with metrics
+			pass
+
+		if not metrics:
+			metric_types = {k: type(v) for k, v in results.get('metrics', {}).items()}
+			metrics_response = self.run_scientist(
+				prompts.SUMMARIZE_EXPERIMENT_LOGS.format(log_out, log_err),
+				validator=lambda x: validators.validate_json(x, metric_types)
+			)
+			metrics = json.loads(metrics_response)
+
+		# In the worst case, default to empty metrics with previous keys
+		if not metrics:
+			metrics = {k: None for k, _ in results.get('metrics', {}).items()}
+
+		res = {
+			'status': job_results.status
+			'metrics': metrics,
+			'hypothesis': job_results.metadata['hypothesis'],
+			'outcome_summary': outcome_summary
+		}
+
+	async def run(self, n_iterations=1):
 		for i in range(n_iterations):
 			if i > 0:
 				prev_version = str(i)
