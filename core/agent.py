@@ -4,8 +4,12 @@ from .llm_client import LLMClient
 
 
 class Agent:
-	def __init__(self, model="gpt-4o", system_prompt: Optional[str] = None):
-		self.llm = LLMClient(model=model)
+	def __init__(
+		self,
+		model="gpt-4o",
+		system_prompt: Optional[str] = None,
+		log_llm_metrics=False):
+		self.llm = LLMClient(model=model, log_metrics=log_llm_metrics)
 
 	def act(self, instruction: str, validator: Optional[Callable[str, bool]], max_retries=1) -> str:
 		response = self.llm.generate(instruction)
@@ -23,3 +27,6 @@ class Agent:
 			return response
 
 		raise ValueError(f'Malformed response after {max_retries} attempts.')
+
+	def flush_logs(self, path: str):
+		self.llm.flush_logs(path)

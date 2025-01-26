@@ -27,11 +27,13 @@ NANOGPT_ENV_VARS = {
 	'NANOGPT_VAL_TOKENS': 10485760
 }
 
+ENTRY_FILENAME = 'train_gpt.py'
+
 
 class NanoGPTClimber(ExperimentRunner):
 	async def _run_exp(self, version: str):
 		# See current solution
-		code = self.workspace.view('train_gpt.py', version=version)
+		code = self.workspace.view(ENTRY_FILENAME, version=version)
 		summary = json.loads(self.workspace.view('results.json', version=version))
 
 		# Request next hypothesis
@@ -55,11 +57,11 @@ class NanoGPTClimber(ExperimentRunner):
 		updated_code = code_utils.extract_code(updated_code_response, strict=False)
 
 		# Save code to workspace's current version dir
-		self.workspace.save_to_file(updated_code, 'train_gpt.py', version=version)
+		self.workspace.save_to_file(updated_code, ENTRY_FILENAME, version=version)
 
 		# Send experiment to slurm
 		job = slurm_utils.submit_job(
-			command='train_gpt.py', 
+			command=ENTRY_FILENAME, 
 			nodes=1, 
 			tasks_per_node=8,
 			gpus_per_node=8, 
@@ -70,6 +72,17 @@ class NanoGPTClimber(ExperimentRunner):
 			working_dir=self.workspace.resolve_path(version=version),
 			env_vars=NANOGPT_ENV_VARS,
 		)
+		# job = slurm_utils.submit_job(
+		# 	command=ENTRY_FILENAME, 
+		# 	nodes=1, 
+		# 	tasks_per_node=1,
+		# 	gpus_per_node=0, 
+		# 	cpus_per_task=12,
+		# 	timeout_min=self.job_ttl,
+		# 	job_name='test',
+		# 	account='maui',
+		# 	working_dir=self.workspace.resolve_path(version=version),
+		# )
 
 		# Monitor experiment status and bookkeep final outcome
 		slurm_utils.JobObserver.shared.observe(
@@ -81,6 +94,8 @@ class NanoGPTClimber(ExperimentRunner):
 
 		# Wait for current experiment and callbacks to finish
 		await slurm.utils.JobObserver.shared.wait()
+
+		self.scientist.flush_logs(self.workspace.resolve_path('llm_history.jsonl', version=version))
 
 	def set_results_for_version(self, version: str, job_results: slurm_utils.JobResult):
 		log_out = job_results.log_out[0]
@@ -142,7 +157,11 @@ async def main():
 
 	node_id = sys.argv[1]
 	model_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
-	scientist = Agent(model_url=model_url, system_prompt=prompts.SCIENTIST_SYSTEM_PROMPT)
+	scientist = Agent(
+		model_url=model_url, 
+		system_prompt=prompts.SCIENTIST_SYSTEM_PROMPT,
+		log_llm_metrics=True
+	)
 
 	root_path = 'workspaces/nanogpt' + f'_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}'
 	template_dir = 'workspace_templates/nanogpt'

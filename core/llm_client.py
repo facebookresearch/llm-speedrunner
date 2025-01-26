@@ -12,7 +12,7 @@ def strip_think_tokens(text: str):
 
 
 class LLMClient:
-    def __init__(self, model_url: str):
+    def __init__(self, model_url: str, log_metrics=False):
         """LLM client to interface with VLLM and other LLM servers based on the OpenAI API.
 
         Args:
@@ -24,6 +24,18 @@ class LLMClient:
             api_key="token-abc123",
             timeout=30*60, # 30 min timeout since we are <thinking/>
         )
+
+        self._log = []
+        self._log_metrics = log_metrics
+
+    def flush_logs(self, path: str):
+        if self._log_metrics:
+            # Write log to log_url
+            with open(path, 'a') as f:
+                for entry in self._log:
+                    f.write(json.dumps(entry) + '\n')
+
+            self._log = []
 
     def generate(
         self, 
@@ -55,6 +67,16 @@ class LLMClient:
         if not show_thinking:
             final_res = strip_think_tokens(res_content).strip()
 
+        if self._log_metrics:
+            self._log.append(
+                dict(
+                    prompt=prompt, 
+                    response=final_res, 
+                    prompt_tokens=completion.usage.prompt_tokens,
+                    completion_tokens=completion.usage.completion_tokens,
+                )
+            )
+
         return final_res
 
 
@@ -67,13 +89,18 @@ if __name__ == "__main__":
     model_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
     print(f'model_url={model_url}')
 
-    llm = LLMClient(model_url=model_url)
+    llm = LLMClient(model_url=model_url, log_metrics=True)
 
     prompt = sys.argv[2]
-    res = llm.generate(
-        prompt, 
-        system_prompt='You are a standup comedian and always present your answers as some kind of joke.', 
-        show_thinking=False
-    )
 
-    print(res)
+    for _ in range(10):
+        res = llm.generate(
+            prompt, 
+            system_prompt='Respond as if you are Shrek.', 
+            show_thinking=False
+        )
+
+        print(res)
+
+    llm.flush_logs('journal.jsonl')
+
