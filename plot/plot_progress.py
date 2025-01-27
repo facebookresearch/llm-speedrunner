@@ -1,3 +1,11 @@
+"""Plot progress in a metric vs. experiment iterations
+
+Usage:
+python plot/plot_progress.py \
+--workspace_path=workspaces/collatz_test \
+--metric=max_steps
+"""
+
 import argparse
 import os
 import re

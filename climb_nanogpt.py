@@ -72,7 +72,7 @@ class NanoGPTClimber(ExperimentRunner):
 		# 	tasks_per_node=8,
 		# 	gpus_per_node=8, 
 		# 	cpus_per_task=12,
-		# 	timeout_min=self.job_ttl,
+		# 	job_ttl=self.job_ttl,
 		# 	job_name='nanogpt',
 		# 	account='maui',
 		# 	working_dir=self.workspace.resolve_path(version=version),
@@ -84,7 +84,7 @@ class NanoGPTClimber(ExperimentRunner):
 			tasks_per_node=1,
 			gpus_per_node=1, 
 			cpus_per_task=12,
-			timeout_min=self.job_ttl,
+			job_ttl=self.job_ttl,
 			job_name='test',
 			account='maui',
 			working_dir=self.workspace.resolve_path(version=version),
@@ -151,7 +151,7 @@ class NanoGPTClimber(ExperimentRunner):
 		self.workspace.save_to_file(json.dumps(job_results), 'results.json', version=version)
 
 
-	async def run(self, n_iterations=1):
+	async def run(self, n_iterations=5):
 		for i in range(n_iterations):
 			if i > 0:
 				prev_version = str(i)
@@ -159,7 +159,6 @@ class NanoGPTClimber(ExperimentRunner):
 			else:
 				version = '1'
 			await self._run_exp(version=version)
-
 
 async def main():
 	# Create scientist agent
@@ -185,12 +184,12 @@ async def main():
 	exp_config = ExperimentConfig(
 		preamble=prompts.NANOGPT_TASK_PREAMBLE,
 		# job_ttl=1*60  # 1 hour
-		job_ttl=2 # 2 minutes
+		job_ttl=4 # 2 minutes
 	)
 
 	climber = NanoGPTClimber(config=exp_config, workspace=workspace, scientist=scientist)
 
-	await climber.run(n_iterations=10)
+	await climber.run(n_iterations=1)
 
 
 if __name__ == '__main__':
