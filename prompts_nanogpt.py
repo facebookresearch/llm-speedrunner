@@ -29,10 +29,10 @@ If no metrics are successfully extracted, return the empty dict, {{}}. If any in
 
 
 # NanoGPT speedrun prompts
-NANOGPT_TASK_PREAMBLE = """Your goal is to improve the training logic in train_gpt.py to achieve the lowest possible training loss on the FineWeb dataset in the shortest amount of time possible.
+TASK_PREAMBLE = """Your goal is to improve the training logic in train_gpt.py to achieve the lowest possible training loss on the FineWeb dataset in the shortest amount of time possible.
 """
 
-NANOGPT_TASK_GENERATE_HYPOTHESIS = """Study the current version of train_gpt.py:
+GENERATE_HYPOTHESIS = """Study the current version of train_gpt.py:
 
 {code}
 
@@ -52,7 +52,7 @@ Structure your response as a JSON in this format. Do not include any extra comme
 """
 
 
-NANOGPT_TASK_IMPLEMENT_HYPOTHESIS = """Study the current version of train_gpt.py:
+IMPLEMENT_HYPOTHESIS = """Study the current version of train_gpt.py:
 
 {code}
 
