@@ -97,7 +97,6 @@ class Workspace:
             src_path = fs_utils.expand_path(self.template_dir)
 
         if src_path is not None:
-            print(f'copying contents from {src_path} to {new_version_dir_path}')
             fs_utils.cp_dir(src_path, new_version_dir_path)
 
         if from_version is not None:

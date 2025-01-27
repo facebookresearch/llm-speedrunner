@@ -29,7 +29,7 @@ If no metrics are successfully extracted, return the empty dict, {{}}. If any in
 
 
 # NanoGPT speedrun prompts
-NANOGPT_TASK_PREAMBLE = """Your goal is to improve the training logic in collatz.py to find the longest Collatz sequence with a runtime budget of 1 minute.
+NANOGPT_TASK_PREAMBLE = """Your goal is to improve the logic in collatz.py to find the longest Collatz sequence with a runtime budget of 1 minute.
 
 Your script will be terminated automatically when the time is up. You will be judged based on any results printed to stdout within this time.
 """
@@ -63,6 +63,7 @@ Now implement the following hypothesis for improving the code.
 {hypothesis}
 
 Make sure you do not change the logging statements, so that the results continue to printed to stdout in the same format. Otherwise, the experiment run may be deemed invalid.
+Besides the logging statements, you can change anything about the script, including the limit.
 
 In your final response, include ONLY the fully-functional updated code which implements ideas in the hypothesis above. Do NOT include any other content in your final response besides the code.
 """

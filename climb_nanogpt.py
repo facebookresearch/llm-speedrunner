@@ -184,12 +184,12 @@ async def main():
 	exp_config = ExperimentConfig(
 		preamble=prompts.NANOGPT_TASK_PREAMBLE,
 		# job_ttl=1*60  # 1 hour
-		job_ttl=4 # 2 minutes
+		job_ttl=5 # 2 minutes
 	)
 
 	climber = NanoGPTClimber(config=exp_config, workspace=workspace, scientist=scientist)
 
-	await climber.run(n_iterations=1)
+	await climber.run(n_iterations=10)
 
 
 if __name__ == '__main__':
