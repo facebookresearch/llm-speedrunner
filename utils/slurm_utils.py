@@ -174,7 +174,8 @@ def submit_job(
     working_dir: str = '.',
     log_dir='submitit_logs',
     bwrap=True,
-    env_vars: Optional[dict[str, str]] = None
+    env_vars: Optional[dict[str, str]] = None,
+    use_torchrun=False
 ):
     """
     Launches a SLURM job using submitit with the specified arguments.
@@ -212,58 +213,68 @@ def submit_job(
         },
     )
 
-    def job_function():
-        import os
-        import socket
-        import subprocess
+    if use_torchrun:
+        def job_function():
+            import os
+            import socket
+            import subprocess
 
-        def find_free_port():
-            """Find an available port on the system."""
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', 0))  # Bind to any available port
-                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                return s.getsockname()[1]  # Return the port number
+            def find_free_port():
+                """Find an available port on the system."""
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(('', 0))  # Bind to any available port
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    return s.getsockname()[1]  # Return the port number
 
-        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
-        # Set up SLURM environment variables
-        master_addr = subprocess.getoutput("scontrol show hostname $SLURM_NODELIST | head -n 1").strip()
-        os.environ["MASTER_ADDR"] = master_addr
+            # Set up SLURM environment variables
+            master_addr = subprocess.getoutput("scontrol show hostname $SLURM_NODELIST | head -n 1").strip()
+            os.environ["MASTER_ADDR"] = master_addr
 
-        # Dynamically set the master port
-        master_port = find_free_port()
-        os.environ["MASTER_PORT"] = str(master_port)
+            # Dynamically set the master port
+            master_port = find_free_port()
+            os.environ["MASTER_PORT"] = str(master_port)
 
-        os.environ["WORLD_SIZE"] = str(int(nodes * tasks_per_node))  # Total processes
-        os.environ["RANK"] = os.environ.get("SLURM_PROCID", "0")  # Rank assigned by SLURM
+            os.environ["WORLD_SIZE"] = str(int(nodes * tasks_per_node))  # Total processes
+            os.environ["RANK"] = os.environ.get("SLURM_PROCID", "0")  # Rank assigned by SLURM
 
-        # Debugging logs for distributed setup
-        print(f"MASTER_ADDR: {os.environ['MASTER_ADDR']}")
-        print(f"MASTER_PORT: {os.environ['MASTER_PORT']}")
-        print(f"WORLD_SIZE: {os.environ['WORLD_SIZE']}")
-        print(f"RANK: {os.environ['RANK']}")
+            # Debugging logs for distributed setup
+            print(f"MASTER_ADDR: {os.environ['MASTER_ADDR']}")
+            print(f"MASTER_PORT: {os.environ['MASTER_PORT']}")
+            print(f"WORLD_SIZE: {os.environ['WORLD_SIZE']}")
+            print(f"RANK: {os.environ['RANK']}")
 
-        if env_vars:
-            for k,v in env_vars.items():
-                os.environ[k] = str(v)
+            if env_vars:
+                for k,v in env_vars.items():
+                    os.environ[k] = str(v)
 
-        # Only run the `torchrun` command on rank 0
-        rank = int(os.environ["RANK"])
-        if rank == 0:
-            # Update the command to explicitly use the dynamic port
-            full_command = (
-                f"torchrun --nproc_per_node={gpus_per_node} "
-                f"--rdzv_endpoint={master_addr}:{master_port} "
-                f"{command}"
-            )
+            # Only run the `torchrun` command on rank 0
+            rank = int(os.environ["RANK"])
+            if rank == 0:
+                # Update the command to explicitly use the dynamic port
+                full_command = (
+                    f"torchrun --nproc_per_node={gpus_per_node} "
+                    f"--rdzv_endpoint={master_addr}:{master_port} "
+                    f"{command}"
+                )
 
-            print(f"Running command: {full_command}")
-            subprocess.run(full_command, shell=True, check=True)
+                print(f"Running command: {full_command}")
+                subprocess.run(full_command, shell=True, check=True)
+    else:
+        def job_function():
+            if env_vars:
+                for k,v in env_vars.items():
+                    os.environ[k] = str(v)
+
+            print(f"Running command: {command}")
+            subprocess.run(command, shell=True, check=True)
+
 
     # Submit the job
     job = executor.submit(job_function)
 
-    print(f"Job submitted with ID: {job.job_id}")
+    print(f"Job submitted with ID: {job.job_id}, {job}")
     return job
 
 

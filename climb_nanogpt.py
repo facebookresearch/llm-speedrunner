@@ -5,6 +5,7 @@ import dataclasses
 import logging
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -17,8 +18,8 @@ from core.agent import Agent
 from core import validators
 from utils import fs_utils
 from utils import slurm_utils
-from utils import code_utils
-import prompts
+# import prompts
+import prompts_collatz as prompts
 
 
 NANOGPT_ENV_VARS = {
@@ -36,27 +37,30 @@ class NanoGPTClimber(ExperimentRunner):
 	async def _run_exp(self, version: str):
 		# See current solution
 		code = self.workspace.view(ENTRY_FILENAME, version=version)
-		summary = json.loads(self.workspace.view('results.json', version=version))
+		summary = self.workspace.view('results.json', version=version)
 
 		# Request next hypothesis
 		hypothesis_res = self.run_scientist(
 			prompts.NANOGPT_TASK_GENERATE_HYPOTHESIS.format(code=code, summary=summary),
 			validator=lambda x: validators.validate_json(x, dict(hypothesis=str)),
 		)
+		print(f'hypothesis_res:\n{hypothesis_res}')
 		hypothesis = json.loads(hypothesis_res)['hypothesis']
 
+		print(f'Hypothesis:\n{hypothesis}')
+
 		# Implement hypothesis
-		updated_code_response = self.run_scientist(
+		updated_code = self.run_scientist(
 			prompts.NANOGPT_TASK_IMPLEMENT_HYPOTHESIS.format(
-				code=code, 
+				code=code,
 				hypothesis=hypothesis,
-				train_files=TRAIN_FILES,
-				val_files=VAL_FILES,
-				val_tokens=VAL_TOKENS,
-			)
+				# train_files=TRAIN_FILES,
+				# val_files=VAL_FILES,
+				# val_tokens=VAL_TOKENS,
+			),
 			validator=validators.validate_code,
 		)
-		updated_code = code_utils.extract_code(updated_code_response, strict=False)
+		print(f'Updated code:\n{updated_code}', flush=True)
 
 		# Save code to workspace's current version dir
 		self.workspace.save_to_file(updated_code, ENTRY_FILENAME, version=version)
@@ -75,10 +79,10 @@ class NanoGPTClimber(ExperimentRunner):
 		# 	env_vars=NANOGPT_ENV_VARS,
 		# )
 		job = slurm_utils.submit_job(
-			command=ENTRY_FILENAME, 
+			command=f"python {ENTRY_FILENAME}", 
 			nodes=1, 
 			tasks_per_node=1,
-			gpus_per_node=0, 
+			gpus_per_node=1, 
 			cpus_per_task=12,
 			timeout_min=self.job_ttl,
 			job_name='test',
@@ -88,14 +92,14 @@ class NanoGPTClimber(ExperimentRunner):
 
 		# Monitor experiment status and bookkeep final outcome
 		slurm_utils.JobObserver.shared.observe(
-			job=job.id,
+			job=job,
 			metadata={'hypothesis': hypothesis},
 			log_dir=os.path.join(self.workspace.resolve_path(version=version), 'submitit_logs'),
 			callback=lambda res: self.set_results_for_version(version, res),
 		)
 
 		# Wait for current experiment and callbacks to finish
-		await slurm.utils.JobObserver.shared.wait()
+		await slurm_utils.JobObserver.shared.wait()
 
 		self.scientist.flush_logs(self.workspace.resolve_path('llm_history.jsonl', version=version))
 
@@ -103,8 +107,9 @@ class NanoGPTClimber(ExperimentRunner):
 		log_out = job_results.log_out[0][-MAX_LOG_LEN:]
 		log_err = job_results.log_err[0][-MAX_LOG_LEN:]
 		outcome_summary = self.run_scientist(
-			prompts.SUMMARIZE_LOGS_PROMPT.format(log_out, log_err)
+			prompts.SUMMARIZE_LOGS_PROMPT.format(log_out=log_out, log_err=log_err)
 		)
+		print(f'outcome_summary:\n{outcome_summary}')
 
 		# Parse metrics from log file
 		metrics = {}
@@ -119,11 +124,16 @@ class NanoGPTClimber(ExperimentRunner):
 		    }
 
 		if not metrics:
-			metric_types = {k: Union[type(v), None] for k, v in results.get('metrics', {}).items()}
+			summary = json.loads(
+				self.workspace.view('results.json', version=version, no_filename_headers=True).strip()
+			)
+			metric_types = {k: Union[type(v), None] for k, v in summary.get('metrics', {}).items()}
+			metric_types_str = json.dumps({k: type(v).__name__ for k, v in summary.get('metrics', {}).items()})
 			metrics_response = self.run_scientist(
-				prompts.PARSE_METRICS.format(text=log_out, metric_types=json.dumps(metric_types)),
+				prompts.PARSE_METRICS_FROM_LOGS.format(logs=log_out, metric_types=metric_types_str),
 				validator=lambda x: validators.validate_json(x, metric_types)
 			)
+			print(f'metrics_response:\n{metrics_response}')
 			metrics = json.loads(metrics_response)
 
 		# In the worst case, default to empty metrics with previous keys
@@ -131,7 +141,7 @@ class NanoGPTClimber(ExperimentRunner):
 			metrics = {k: None for k, _ in results.get('metrics', {}).items()}
 
 		job_results = {
-			'status': job_results.status.value
+			'status': job_results.status.value,
 			'metrics': metrics,
 			'hypothesis': job_results.metadata['hypothesis'],
 			'outcome_summary': outcome_summary

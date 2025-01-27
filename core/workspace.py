@@ -118,7 +118,8 @@ class Workspace:
         self, 
         paths: Optional[Union[list[str], str]] = None, 
         version: Optional[str] = None, 
-        recursive: bool = False
+        recursive: bool = False,
+        no_filename_headers: bool = False,
     ) -> str:
         """
         View the contents of the specified paths, concatenating file contents
@@ -175,7 +176,8 @@ class Workspace:
         contents = []
         for abs_path, file_content in all_files.items():
             rel_path = os.path.relpath(abs_path, base_dir)
-            contents.append(f'# {rel_path}')
+            if not no_filename_headers:
+                contents.append(f'# {rel_path}')
             contents.append(file_content + '\n')
 
         return '\n'.join(contents)
