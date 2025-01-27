@@ -134,11 +134,12 @@ class NanoGPTClimber(ExperimentRunner):
 				validator=lambda x: validators.validate_json(x, metric_types)
 			)
 			print(f'metrics_response:\n{metrics_response}')
-			metrics = json.loads(metrics_response)
+			if metrics_response:
+				metrics = json.loads(metrics_response)
 
 		# In the worst case, default to empty metrics with previous keys
 		if not metrics:
-			metrics = {k: None for k, _ in results.get('metrics', {}).items()}
+			metrics = {k: None for k, _ in summary.get('metrics', {}).items()}
 
 		job_results = {
 			'status': job_results.status.value,

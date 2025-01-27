@@ -45,7 +45,7 @@ Then, consider the summary of this implementation and the result of running it. 
 First, summarize at a high level what the current implementation does.
 Next, come up with a new hypothesis for how you can improve this code to find the longest Collatz sequence within a runtime budget of 1 minute.
 
-Structure your response as a JSON in this format. Do not include any extra commentary in your final response.
+Structure your response as a single JSON in the format below. Do not include any extra commentary in your final response.
 
 {{
 	"summary": Summary of the current implementation,

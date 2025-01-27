@@ -151,7 +151,7 @@ class TestNewWorkspace:
         version_path = self.workspace.resolve_path(version=version)
         assert os.path.exists(version_path)
 
-        metadata_path = self.workspace.resolve_path('meta.json', version=parent_version)
+        metadata_path = self.workspace.resolve_path('meta.json', version=version)
         assert os.path.exists(metadata_path)
 
         with open(metadata_path, 'r') as f:
