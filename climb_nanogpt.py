@@ -52,12 +52,9 @@ class NanoGPTClimber(ExperimentRunner):
 		updated_code = self.run_scientist(
 			prompts.IMPLEMENT_HYPOTHESIS.format(
 				code=code,
-				hypothesis=hypothesis,
-				train_files=TRAIN_FILES,
-				val_files=VAL_FILES,
-				val_tokens=VAL_TOKENS,
+				hypothesis=hypothesis
 			),
-			validator=validators.validate_code,
+			validator=validators.validate_code,odel
 		)
 		print(f'Updated code:\n{updated_code}', flush=True)
 

@@ -63,10 +63,7 @@ Now implement the following hypothesis for improving the code.
 Make sure your code changes preserve these aspects of train_gpt.py:
 - The script continues to be runnable via simply calling `python train_gpt.py`.
 - Do NOT change the value of train_files, val_files, or val_token values in the Hyperparameters config used to set the training args.
-- Make sure these hyperparameters are always set to these values:
-	train_files: {train_files}
-	val_files: {val_files}
-	val_tokens = {val_tokens}
+- Make sure the values of these hyperparameters are not changed, and keep to using the current os.environ variables.
 - Always keep save_checkpoint set to False in the training args.
 - Keep all print0 statements the same. Do not change the arguments used in the current print0 statements, so to ensure the logging format is preserved.
 
