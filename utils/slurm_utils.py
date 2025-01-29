@@ -38,7 +38,6 @@ class JobObserver:
     def observe(
         self,
         job: submitit.Job,
-        log_dir: str,  # Directory for logs if needed
         metadata: Optional[dict[str, str | int | float, bool]] = None,
         callback: Optional[Callable[[JobResult], None]] = None,
         focus_rank: Optional[int] = None,
@@ -49,7 +48,7 @@ class JobObserver:
 
         Args:
             job (submitit.Job): The Submitit job to watch.
-            log_dir (str): Directory for logs if you want additional log processing.
+            metadata (dict): Some data you want to associate with this job.
             callback (Callable[[JobResult], None]): Called after job finishes with the JobResult.
             focus_rank (Optional[int]): If set, only fetch logs from that subtask index.
             poll_interval (int): How often (seconds) to poll the job status.

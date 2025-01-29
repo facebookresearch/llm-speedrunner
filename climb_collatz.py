@@ -12,7 +12,7 @@ import sys
 import time
 
 from core.types import ExperimentConfig
-from core.experiment_runner import ExperimentRunner
+from core.science_runner import ScienceRunner
 from core.workspace import Workspace
 from core.agent import Agent
 from core import validators
@@ -26,7 +26,7 @@ ENTRY_FILENAME = 'collatz.py'
 MAX_LOG_LEN = 3000
 
 
-class NanoGPTClimber(ExperimentRunner):
+class NanoGPTClimber(ScienceRunner):
 	async def _run_exp(self, version: str):
 		# See current solution
 		code = self.workspace.view(ENTRY_FILENAME, version=version)
@@ -72,7 +72,6 @@ class NanoGPTClimber(ExperimentRunner):
 		slurm_utils.JobObserver.shared.observe(
 			job=job,
 			metadata={'hypothesis': hypothesis},
-			log_dir=os.path.join(self.workspace.resolve_path(version=version), 'submitit_logs'),
 			callback=lambda res: self.set_results_for_version(version, res),
 		)
 

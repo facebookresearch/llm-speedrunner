@@ -5,7 +5,7 @@ from core.types import ExperimentConfig
 from core.agent import Agent
 from core.workspace import Workspace
 
-class ExperimentRunner:
+class ScienceRunner:
 	def __init__(self, config: ExperimentConfig, workspace: Workspace, scientist: Agent):
 		self.preamble = config.preamble
 		self.max_retries = config.max_retries
