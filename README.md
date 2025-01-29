@@ -1,10 +1,10 @@
-# Meta AI Scientist
+# 🧪 Meta AI Scientist
 
 This is an early proof-of-concept of an automated scientist agent, with a focus on running ML experiments.
 
 In the current framework, an LLM-based scientist agent (or team of such agents) repeatedly generates hypotheses, implements these hypotheses in code, executes these experiments as Slurm jobs, and summarizes the results of these jobs for the next iteration.
 
-## Todos
+## 📋 Todos
 - [ ] Create a single high-level `launch_scientist.py` integrated with `hydra` for config. 
 - [ ] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
 	- [ ] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
@@ -31,9 +31,12 @@ python climb_collatz.py <vllm node id>
 The automated "science loop" consists of a few common stages:
 
 **Ideation:** Generating new ideas for hypotheses to test and implementation changes to try.
-**Experiment implementation** Coding the experiments that test the ideas produced in the ideation stage.
-**Experiment execution** Running the code that implements the experiments.
-**Results analysis** Extracting insights from the output of the executed experiments.
+
+**Experiment implementation:** Coding the experiments that test the ideas produced in the ideation stage.
+
+**Experiment execution:** Running the code that implements the experiments.
+
+**Results analysis:** Extracting insights from the output of the executed experiments.
 
 This codebase is designed with the following goals in mind:
 - Quick iteration speed
@@ -59,9 +62,9 @@ Having explicit implementations for `Ideator` and `Implementer` variants is usef
 
 
 ### Agents
-Each system-prompted LLM instance is abstracted as an agent, with an `act` method, which takes a prompt (e.g. instruction) and optionally a _validator function_ and a value for `max_retries`. The validator function returns a string value, that can be an arbitrary post-processed version of the LLM response to the prompt, and it should always return `None` to mark the response as invalid. The method `act` will then retry querying the LLM with the prompt a maximum of `max_retries` times.
+Each system-prompted LLM instance is abstracted as an agent, with an `act` method, which takes a prompt (e.g. instruction) and optionally a _validator function_ and a value for `max_retries`. The validator function returns a string value, that can be an arbitrary post-processed version of the LLM response to the prompt, and it should return `None` to mark the response as invalid. The method `act` will then retry querying the LLM with the prompt a maximum of `max_retries` times.
 
-In particular, it would makes sense to implment `Ideator` and `Implementer` as subclasses of `Agent`.
+In particular, it would make sense to implement `Ideator` and `Implementer` as subclasses of `Agent`.
 
 
 ### Versioned workspaces
