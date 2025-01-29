@@ -29,7 +29,7 @@ NANOGPT_ENV_VARS = {
 
 ENTRY_FILENAME = 'train_gpt.py'
 
-MAX_LOG_LEN = 3000
+MAX_LOG_LEN = 30000
 
 
 class NanoGPTClimber(ScienceRunner):
