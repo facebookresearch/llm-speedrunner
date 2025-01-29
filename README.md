@@ -9,6 +9,7 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [ ] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
 	- [ ] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
 - [ ] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
+- [ ] Add support diff-based editors (e.g. via Aider-based Implementers)
 - [ ] Support MetaGen and third-party LLM APIs in `core.llm_client`.
 
 ## Run examples
@@ -57,8 +58,8 @@ While the core run logic can currently be free-form, we plan to fork ScienceRunn
 
 In particular, one possible design is to abstract ideation and implementation strategies under subclasses of general `Ideator` and `Implementer` classes. The modules `core.ideators` and `core.implementers` can then act as central registries for Ideator and Implementer subclasses, making it easy to define combinations of ideator and implementer strategies in the hydra config.
 
-_Why explict modules?_
-Having explicit implementations for `Ideator` and `Implementer` variants is useful, as these strategies will be valuable to run in isolation, either for the purposes of evaluation (per-stage evals) or for handling independent endpoints in downstream integrations (e.g. giving Metamate a "ideation" or "experiment implementation" skill).
+#### Why explict modules?
+Having explicit implementations for `Ideator` and `Implementer` variants is useful, as these strategies will be valuable to run in isolation, either for the purposes of evaluation (per-stage evals) or for handling independent endpoints in downstream integrations (e.g. giving Metamate an "ideation" or "experiment implementation" skill).
 
 
 ### Agents
@@ -73,8 +74,6 @@ Each scientist run is encapsulated in its own subdirectory inside the `workspace
 Each experiment implemented by the scientist during a run corresponds to a _version_ of an initial _workspace template_, a directory of files and potentially nested subdirectories. Workspace templates provides the initial project contents that serve as a starting point for the scientist to begin its experimentation. 
 
 When the workspace is first created, `v_1` (version 1) is initialized by copying the specified workspace template. Each experiment iteration corresponds to branching (i.e. copying) the previous version into a new version (e.g. `v_1 -> v_2`) and making changes in the new version directory. In this way, workspaces track the full history over arbitrary trees of codebases that may be created during the course of a scientist run.
-
-The current scientist scripts (`climb_nanogpt.py` and `climb_collatz`) both flush 
 
 
 ### JobObserver
