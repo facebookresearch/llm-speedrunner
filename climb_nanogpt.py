@@ -54,7 +54,7 @@ class NanoGPTClimber(ScienceRunner):
 				code=code,
 				hypothesis=hypothesis
 			),
-			validator=validators.validate_code,odel
+			validator=validators.validate_code
 		)
 		print(f'Updated code:\n{updated_code}', flush=True)
 

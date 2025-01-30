@@ -26,7 +26,7 @@ ENTRY_FILENAME = 'collatz.py'
 MAX_LOG_LEN = 30000
 
 
-class NanoGPTClimber(ScienceRunner):
+class CollatzClimber(ScienceRunner):
 	async def _run_exp(self, version: str):
 		# See current solution
 		code = self.workspace.view(ENTRY_FILENAME, version=version)
@@ -140,7 +140,7 @@ class NanoGPTClimber(ScienceRunner):
 
 async def main():
 	if len(sys.argv) != 2:
-	    print("Usage: python climb_nanogpt.py <vllm server node_id>")
+	    print("Usage: python climb_collatz.py <vllm server node_id>")
 	    sys.exit(1)
 
 	node_id = sys.argv[1]
@@ -160,7 +160,7 @@ async def main():
 		job_ttl=5 # 2 minutes
 	)
 
-	climber = NanoGPTClimber(config=exp_config, workspace=workspace, scientist=scientist)
+	climber = CollatzClimber(config=exp_config, workspace=workspace, scientist=scientist)
 
 	await climber.run(n_iterations=10)
 
