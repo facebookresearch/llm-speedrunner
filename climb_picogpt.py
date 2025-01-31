@@ -18,7 +18,7 @@ from core.agent import Agent
 from core import validators
 from utils import fs_utils
 from utils import slurm_utils
-import prompts_collatz as prompts
+import prompts_picogpt as prompts
 
 
 ENTRY_FILENAME = 'main.py'
