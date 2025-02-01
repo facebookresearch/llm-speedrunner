@@ -5,11 +5,11 @@ This is an early proof-of-concept of an automated scientist agent, with a focus 
 In the current framework, an LLM-based scientist agent (or team of such agents) repeatedly generates hypotheses, implements these hypotheses in code, executes these experiments as Slurm jobs, and summarizes the results of these jobs for the next iteration.
 
 ## 📋 Todos
-- [ ] Create a single high-level `launch_scientist.py` integrated with `hydra` for config. 
-- [ ] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
+- [x] Create a single high-level `launch_scientist.py` integrated with `hydra` for config. 
+- [x] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
 	- [ ] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
-- [ ] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
-- [ ] Add support diff-based editors (e.g. via Aider-based Implementers)
+- [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
+- [x] Add support diff-based editors (e.g. via Aider-based Implementers)
 - [ ] Support MetaGen and third-party LLM APIs in `core.llm_client`.
 
 ## Run examples
@@ -22,13 +22,13 @@ python serve_vllm.py
 
 Find the node id for this vllm job on Slurm and run one of the scientist scripts:
 ```
-python climb_collatz.py <vllm node id>
+python launch_scientist.py <vllm node id>
 ```
+
+By default `launch_scientist.py` will run the scientist on the task defined in `config/task/collatz.yaml`. You can change the default task by updating the `task` field under the default settings in `default.yaml` to the name of another config file in `config/task/`. For instructions on adding a new task, see the "Adding a new task" section below.
 
 
 ## Design
-**This is an early iteration of the codebase and major architectural decisions may be subject to change**
-
 The automated "science loop" consists of a few common stages:
 
 **Ideation:** Generating new ideas for hypotheses to test and implementation changes to try.
@@ -47,16 +47,17 @@ This codebase is designed with the following goals in mind:
 - Clearly tracks all artifacts produced by the scientist at each stage (see workspaces design below)
 - Plays nicely with Slurm
 
+
 ### The core science loop
 To maximize flexibility and speed early on, the scientist experimentation loop for each task, e.g. speedrunning nanoGPT, is implemented in its own script, e.g. `climb_nanogpt.py`.
 
 The core science loop in each script is implemented via a subclass of ScienceRunner (e.g. `NanoGPTClimber`) implements a `run(n_iterations: int)` method, which executes the scientist loop several times.
 
 While the core run logic can currently be free-form, we plan to fork ScienceRunner into two variations: 
-- `BaseScienceRunner` will remain unstructured in its run logic
-- `ScienceRunner`, which inherits from `BaseScienceRunner`, will follow a structured sequence of steps corresponding to the common stages above, with some freedom around how often they are each run and parallelized per iteration.
+- `ScienceRunner` will remain unstructured in its run logic
+- `BoNScienceRunner`, which inherits from `ScienceRunner`, follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch of N hypotheses can be generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
 
-In particular, one possible design is to abstract ideation and implementation strategies under subclasses of general `Ideator` and `Implementer` classes. The modules `core.ideators` and `core.implementers` can then act as central registries for Ideator and Implementer subclasses, making it easy to define combinations of ideator and implementer strategies in the hydra config.
+In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Implementer` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.implementers` serve as central registries for Ideator and Implementer subclasses, making it easy to define combinations of ideator and implementer strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries. 
 
 #### Why explict modules?
 Having explicit implementations for `Ideator` and `Implementer` variants is useful, as these strategies will be valuable to run in isolation, either for the purposes of evaluation (per-stage evals) or for handling independent endpoints in downstream integrations (e.g. giving Metamate an "ideation" or "experiment implementation" skill).
@@ -64,8 +65,6 @@ Having explicit implementations for `Ideator` and `Implementer` variants is usef
 
 ### Agents
 Each system-prompted LLM instance is abstracted as an agent, with an `act` method, which takes a prompt (e.g. instruction) and optionally a _validator function_ and a value for `max_retries`. The validator function returns a string value, that can be an arbitrary post-processed version of the LLM response to the prompt, and it should return `None` to mark the response as invalid. The method `act` will then retry querying the LLM with the prompt a maximum of `max_retries` times.
-
-In particular, it would make sense to implement `Ideator` and `Implementer` as subclasses of `Agent`.
 
 
 ### Versioned workspaces
@@ -96,7 +95,15 @@ Importantly, if you want to block thread execution until all observed jobs are f
 Under the hood, JobObserver manages a set of `asyncio` tasks that regularly polls for the status of each observed job. This means the main function for each scientist script must be run as `asyncio.run(main())`, so that the asyncio run loop is properly initialized (see `climb_nanogpt.py` or `climb_collatz.py` for examples).
 
 
+### Adding a new task
 
+Adding a new task requires only a few steps:
+
+1. Create a new _workspace template_ as its own folder under `workspace_templates/`. This is the set of starting files available to the scientist. Whatever is in the task's workspace template is copied into the `v_1` workspace when running the scientist.
+
+2. Create a new task config under `config/task/`. Remember to set the header `# @package _global_`. See the existing configs for examples. In particular `collatz.yaml` provides an example for experiments requiring only CPUs, `picogpt.yaml`, requiring GPUs, and `nanogpt.yaml` requiring GPUs and the use of `torchrun`.
+
+3. Change the value of task in `config/default.yaml` to the name of your task's yaml file created above (or create your own top-level config with `task` configured appropriately).
 
 
 

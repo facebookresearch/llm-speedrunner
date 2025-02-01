@@ -1,0 +1,10 @@
+# @package _global_
+
+coder_args:
+  _target_: core.coders.aider.AiderCoder
+  model_url: ${model_url}
+  system_prompt: ${system_prompt}
+  log_llm_metrics: ${log_llm_metrics}
+  model_name: "openai/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
+  stream: True
+  edit_format: "diff"

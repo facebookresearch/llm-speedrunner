@@ -1,0 +1,56 @@
+# @package _global_
+
+template_dirname: picogpt
+
+n_iterations: 3
+
+exp_config_args:
+  _target_: core.types.ExperimentConfig
+
+  max_retries: 3
+
+  preamble: >-
+    Your goal is to improve the model architecture and other training logic in main.py,
+    so that running exactly `python main.py` results in the highest possible
+    test accuracy after 10 epochs.
+
+  idea_instructions: >-
+    The implementation of main.py should achieve the lowest test_loss possible
+    after 10 epochs of training.
+
+  code_instructions: >-
+    Make sure your code changes preserve these aspects of main.py:
+    - The script continues to be runnable via simply calling `python main.py`,
+      so any changes to the hyperparameters in the arguments should be set by directly
+      setting the default value for that argument.\n
+    - Do not change the format of the logging print statements.\n
+
+    If you violate any of the above constraints, the experiment run will be invalid.
+
+    Your code will be run on a machine with a single H100 GPU.
+
+  entry_fname: main.py
+  fnames: 
+    - 'main.py'
+
+  metric_types:
+    test_loss: float
+    test_acc: float
+
+  metrics_at_most:
+    val_loss: 3.28
+
+  selection_metric: train_time
+  lower_is_better: true
+
+slurm_config_args:
+  _target_: core.types.SlurmConfig
+
+  nodes: 1
+  tasks_per_node: 1
+  gpus_per_node: 1
+  cpus_per_task: 12
+  job_ttl: 30
+  use_torchrun: false
+  job_name: picogpt
+  account: maui

@@ -9,7 +9,8 @@ def run_vllm_server():
         "serve",
         model_path,
         "--gpu-memory-utilization", "0.9",
-        "--tensor-parallel-size", "2"
+        "--tensor-parallel-size", "2",
+        "--enable-prefix-caching"
     ]
     subprocess.run(command, check=True)
 

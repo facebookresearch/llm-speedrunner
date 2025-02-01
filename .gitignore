@@ -17,5 +17,11 @@ venv/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
+# Hydra outputs
+outputs/
 
+# Workspaces
 workspaces
+
+# Aider
+aider.txt
