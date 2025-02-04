@@ -28,7 +28,9 @@ exp_config_args:
     - Always keep save_checkpoint set to False in the training args.\n
     - Keep all print0 statements the same. Do not change the arguments 
       used in the current print0 statements, so to ensure the logging format is preserved.\n
-    - When possible, just change the train_gpt.py file without making extra files.
+    - When possible, just change the train_gpt.py file without making extra files.\n
+    - Important: I care about optimizing the performance of the implementation and
+      do not care how organized or disorganized the code is.
     - Any bugs will be described in the "outcome_summary" value of the summary, if provided.
       Always focus on addressing these when present, before improving other parts of the code.
 
