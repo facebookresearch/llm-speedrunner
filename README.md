@@ -7,7 +7,7 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 ## 📋 Todos
 - [x] Create a single high-level `launch_scientist.py` integrated with `hydra` for config. 
 - [x] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
-	- [ ] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
+	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
 - [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
 - [x] Add support diff-based editors (e.g. via Aider-based Implementers)
 - [ ] Support MetaGen and third-party LLM APIs in `core.llm_client`.
