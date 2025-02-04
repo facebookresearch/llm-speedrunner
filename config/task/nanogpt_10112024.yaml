@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - nanogpt
+
+template_dirname: nanogpt_101124
+
+n_iterations: 10
