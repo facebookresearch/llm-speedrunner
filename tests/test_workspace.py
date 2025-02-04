@@ -200,4 +200,24 @@ class TestNewWorkspace:
         with pytest.raises(ValueError):
             view = self.workspace.view(paths='missing.txt')
 
+    def test_get_top_k_versions(self):
+        versions = ['1', '2']
+        scores = [1.0, 2.0]
+        for version, score in zip(versions, scores):
+            res_path = self.workspace.resolve_path('results.json', version=version)
+            with open(res_path, 'w') as f:
+                res = dict(metrics={'score': score})
+                json.dump(res, f)
 
+        top_k = self.workspace.get_top_k_versions('score', k=2)
+
+        assert top_k == ['2', '1']
+
+        top_k = self.workspace.get_top_k_versions('score', k=1)
+        assert top_k == ['2']
+
+        top_k = self.workspace.get_top_k_versions('score')
+        assert top_k == ['2']
+
+        top_k = self.workspace.get_top_k_versions('score', from_versions=['1'])
+        assert top_k == ['1']

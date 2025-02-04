@@ -10,8 +10,14 @@ class Agent:
         system_prompt: Optional[str] = None,
         log_llm_metrics=False):
         self.llm = LLMClient(model_url=model_url, log_metrics=log_llm_metrics)
+        self.system_prompt = system_prompt
 
-    def act(self, instruction: str, validator: Optional[Callable[str, Optional[str]]], max_retries=1) -> str:
+    def act(
+        self, 
+        instruction: str,
+        validator: Optional[Callable[str, Optional[str]]] = None,
+        max_retries=1
+    ) -> str:
         response = self.llm.generate(instruction)
 
         if validator:
@@ -19,7 +25,7 @@ class Agent:
 
             n_retries = 0
             while n_retries < max_retries and response is None:
-                response = LLMClient.generate(instruction, system_prompt=system_prompt)
+                response = self.llm.generate(instruction, system_prompt=self.system_prompt)
 
                 n_retries += 1
 

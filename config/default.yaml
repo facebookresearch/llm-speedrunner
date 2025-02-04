@@ -1,0 +1,38 @@
+defaults:
+  - _self_
+  - task: collatz
+  - science_runner: bon
+  - ideator: base
+  - coder: aider
+
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled  
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
+
+node_id: dummy
+
+model_url: "http://${node_id}.fair-aws-h100-2.hpcaas:8000/v1"
+
+log_llm_metrics: True
+
+n_iterations: 10
+
+system_prompt: >-
+  You are a machine learning scientist, with expertise in 
+  large language models and high-performance computing. 
+  Use your expertise to assist the user in their machine learning task.
+
+workspace_args:
+  _target_: core.workspace.Workspace
+  root_path: ${oc.env:PWD}/workspaces/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
+  template_dir: ${oc.env:PWD}/workspace_templates/${template_dirname}
+
+assistant_args:
+  _target_: core.agent.Agent
+  model_url: ${model_url}
+  system_prompt: ${system_prompt}
+  log_llm_metrics: ${log_llm_metrics}

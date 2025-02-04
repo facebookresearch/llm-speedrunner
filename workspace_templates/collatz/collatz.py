@@ -27,5 +27,4 @@ def find_max_collatz(limit):
 
 limit = 10_000_000
 result = find_max_collatz(limit)
-print(f"The number under {limit} with the longest steps is {result[0]} (Steps: {result[1]})")
-print(f"Runtime: {result[2]:.2f} seconds")
+print(f"limit: {limit} start_value: {result[0]} max_steps: {result[1]} runtime: {result[2]:.2f}")

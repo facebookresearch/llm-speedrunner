@@ -1,4 +1,4 @@
-from typing import Optional, Union, Type
+from typing import Callable, Optional, Union, Type
 
 import dataclasses
 import logging
@@ -9,8 +9,13 @@ import shutil
 import subprocess
 import time
 
+import numpy as np
+
 from core.types import ExperimentRecord, ExperimentHistory, ExperimentConfig
 from utils import fs_utils
+
+
+VERSION_REGEX = re.compile(r'^v_(\d+)$')
 
 
 class Workspace:
@@ -45,11 +50,10 @@ class Workspace:
 
     def _get_version_dirs(self) -> list[str]:
         version_dirs = []
-        pattern = re.compile(r'^v_(\d+)$')
 
         for dirname in os.listdir(self.root_path):
             abs_dir_path = self.resolve_path(dirname)
-            match = pattern.match(dirname)  # Match pattern and extract integer
+            match = VERSION_REGEX.match(dirname)  # Match pattern and extract integer
             if os.path.isdir(abs_dir_path) and match:
                 version_dirs.append((int(match.group(1)), abs_dir_path))  # Store (integer, path)
 
@@ -82,7 +86,7 @@ class Workspace:
         self, 
         from_path: Optional[str] = None, 
         from_version: Optional[str] = None
-    ):
+    ) -> int:
         """Create new version directory, copying all contents in from_path."""
         self.n_versions += 1
         new_version = str(self.n_versions)
@@ -184,6 +188,81 @@ class Workspace:
 
     def exec_cmd(self, cmd: str):
         return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+    def get_top_k_versions(
+        self, 
+        selection_metric: str,
+        from_versions: Optional[list[str]] = None,
+        lower_is_better=False,
+        k=1
+    ) -> list[str]:
+        """Get the top-k versions based on a selection_fn
+        
+        Args:
+            selection_fn: Given a results dict, returns a fitness score.
+            from_versions: Choose only among these versions.
+            k: Select the top-k versions.
+
+        Returns:
+            A list of the top-k versions based on the selection func.
+        """
+        all_version_dirnames = [
+            self.resolve_path(dirname) for dirname in os.listdir(self.resolve_path())
+            if VERSION_REGEX.match(dirname)
+        ]
+
+        if from_versions is not None:
+            if len(from_versions) == 0:
+                raise ValueError('from_versions cannot be an empty list.')
+            else:
+                version2path = {}
+                filtered_version_dirnames = []
+                for dirname in all_version_dirnames:
+                    # select only dirnames that match these versions
+                    match = VERSION_REGEX.match(os.path.basename(dirname))  # Match pattern and extract integer
+                    if match:
+                        version = match.group(1)
+                        version2path[version] = self.resolve_path(dirname)
+
+                for version in from_versions:
+                    if version in version2path:
+                        filtered_version_dirnames.append(version2path[version])
+
+                all_version_dirnames = filtered_version_dirnames
+
+        flip_coef = -1 if lower_is_better else 1
+        default_value = -np.inf
+
+        versions = []
+        scores = []
+        for dirname in all_version_dirnames:
+            match = VERSION_REGEX.match(os.path.basename(dirname))
+
+            if match:
+                version = match.group(1)
+                res_path = self.resolve_path('results.json', version=version)
+                if os.path.exists(res_path):
+                    with open(res_path, 'r') as f:
+                        results = json.load(f)
+
+                    metrics = results.get('metrics', {})
+                    score = metrics.get(selection_metric, None)
+                    if score is None:
+                        score = default_value
+                    score *= flip_coef
+
+                    if not isinstance(score, float):
+                        try:
+                            score = float(score)
+                        except (ValueError, TypeError):
+                            pass
+                    scores.append(score)
+                    versions.append(version)
+        
+        # Sort versions based on scores in desc order, with higher versions taking precendence if scores are equal
+        sorted_versions = [v for v, _n in sorted(zip(versions, scores), key=lambda x: (x[1], int(x[0])), reverse=True)]
+
+        return sorted_versions[:k]
 
     def view_history(
         self, 
