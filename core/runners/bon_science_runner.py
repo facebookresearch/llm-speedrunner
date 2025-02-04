@@ -71,7 +71,7 @@ class BoNScienceRunner(ScienceRunner):
 		if self.slurm_config.use_torchrun:
 			command = self.entry_fname
 		else:
-			command = f'python {self.entry_name}'
+			command = f'python {self.entry_fname}'
 
 		job = slurm_utils.submit_job(
 			command=command, 
@@ -118,8 +118,6 @@ class BoNScienceRunner(ScienceRunner):
 			)
 
 	async def run(self, n_iterations=1):
-		# @todo: Bookkeep version based on branching factor
-		# @todo: Add select_elite method
 		open_version = None
 		for i in range(n_iterations):
 			# Request next hypotheses

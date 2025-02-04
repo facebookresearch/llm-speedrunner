@@ -20,7 +20,8 @@ class AiderCoder(Agent):
         log_llm_metrics=False,
         model_name: Optional[str] = None,
         stream=False,
-        edit_format='diff'):
+        edit_format='diff',
+        max_reflections=5):
 
         if system_prompt:
             logging.info('Currently, system prompt for AiderCoder is ignored.')
@@ -41,8 +42,9 @@ class AiderCoder(Agent):
             stream=stream,
             use_git=False,
             edit_format=edit_format,
-            summarize_from_coder=True
+            summarize_from_coder=True,
         )
+        self._coder.max_reflections = max_reflections
 
     def code(
         self, 
