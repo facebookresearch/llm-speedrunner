@@ -21,7 +21,10 @@ venv/
 outputs/
 
 # Workspaces
-workspaces
+workspaces/
+
+# Figures
+figures/
 
 # Aider
 aider.txt

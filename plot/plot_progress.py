@@ -114,6 +114,12 @@ def main():
                         help="ylabel, defaults to 'Iteration'")
     parser.add_argument('--ylabel', type=str, default=None,
                         help="ylabel, defaults to metric")
+    parser.add_argument('--yrescale', type=float, default=None,
+                        help="Value by which to rescale the y-values")
+    parser.add_argument('--ythreshold', type=float, default=None,
+                        help="Plot y-threshold value here")
+    parser.add_argument('--save_name', type=str, default=None,
+                        help="Save to figures/<save_name>. Should include the file extension, e.g. .pdf")
     args = parser.parse_args()
 
     # Gather data into DataFrame
@@ -123,6 +129,9 @@ def main():
         print("No data found for the specified metric.")
         return
 
+    if args.yrescale:
+        df[args.metric] = df[args.metric]*args.yrescale
+
     # Plot the metric over experiment iterations
     fig, ax = plt.subplots()
     ax.plot(df['step'], df[args.metric], marker='o', linestyle='-')
@@ -130,17 +139,25 @@ def main():
     ax.set_ylabel(args.ylabel or args.metric)
     plt.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
 
+    if args.ythreshold is not None:
+        plt.axhline(y=args.ythreshold, color='orange', linestyle='-', linewidth=2)
+
+
     # Set some hypotheses here
-    annotate_with_labels(
-        **get_point_labels(
-            *tuple(zip(*get_step_labels_for_collatz())), df[args.metric], 
-        )
-    )
+    # if 'collatz' in args.workspace_template_path:
+    #     annotate_with_labels(
+    #         **get_point_labels(
+    #             *tuple(zip(*get_step_labels_for_collatz())), df[args.metric], 
+    #         )
+    #     )
 
     ax.grid(color='black', linestyle='-', linewidth=1, alpha=0.1)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.tight_layout()
+
+    if args.save_name:
+        plt.savefig(f'figures/{args.save_name}', dpi=300, bbox_inches='tight')
 
     plt.show()
 
