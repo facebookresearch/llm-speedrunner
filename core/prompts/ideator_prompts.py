@@ -1,4 +1,7 @@
-GENERATE_CODE_HYPOTHESIS = """Study the current version of {fname}:
+from typing import Optional
+
+
+GENERATE_CODE_HYPOTHESIS = """Study the current code:
 
 {code}
 
@@ -8,7 +11,7 @@ In the summary, the "hypothesis" value refers to the original hypothesis motivat
 {summary}
 
 First, summarize at a high level what the current implementation does.
-Next, come up with a new hypothesis for how you can improve the code to achieve the following:
+Then, come up with a new hypothesis for how you can improve the code to achieve the following:
 
 {instruction}
 
@@ -19,3 +22,31 @@ Structure your response as a single JSON in the format below. Do not include any
 	"hypothesis": Hypothesis for improving the implementation
 }}
 """
+
+
+HISTORY_INFO_COMPONENT = """To help in this task, consider this list of previous changes you have attempted along with their outcomes.
+
+{history}
+"""
+
+
+def basic_ideation_prompt(
+	code: str,
+	summary: str, 
+	instruction: str,
+	history: Optional[str] = None,
+):
+	instructions = [instruction]
+
+	if history:
+		instructions.append(
+			HISTORY_INFO_COMPONENT.format(history=history)
+		)
+
+	full_instructions = '\n'.join(instructions)
+
+	return GENERATE_CODE_HYPOTHESIS.format(
+		code=code,
+		summary=summary,
+		instruction=full_instructions,
+	)

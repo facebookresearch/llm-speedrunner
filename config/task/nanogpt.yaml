@@ -64,6 +64,7 @@ slurm_config_args:
   use_torchrun: true
   job_name: nanogpt
   account: maui
+  qos: maui_high
   env_vars:
     NANOGPT_TRAIN_FILES: "/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_train_*.bin"
     NANOGPT_VAL_FILES: "/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_val_*.bin"

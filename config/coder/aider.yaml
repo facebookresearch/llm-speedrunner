@@ -9,3 +9,4 @@ coder_args:
   stream: True
   edit_format: "diff"
   max_reflections: 5
+  use_temperature: 0.6

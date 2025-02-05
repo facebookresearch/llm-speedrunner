@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 from pathlib import Path
 import logging
 import os
@@ -9,6 +9,7 @@ from aider.models import Model
 from aider.llm import litellm
 
 from core.agent import Agent
+from core.prompts import coder_prompts
 from core.workspace import Workspace
 
 
@@ -21,8 +22,9 @@ class AiderCoder(Agent):
         model_name: Optional[str] = None,
         stream=False,
         edit_format='diff',
-        max_reflections=5):
-
+        max_reflections=5,
+        use_temperature: Union[bool, float] = False
+    ):
         if system_prompt:
             logging.info('Currently, system prompt for AiderCoder is ignored.')
 
@@ -35,6 +37,8 @@ class AiderCoder(Agent):
         os.environ['OPENAI_API_KEY'] = "sk-123"  # dummy value
         
         main_model = Model(model_name)
+        if use_temperature is not None:
+            main_model.use_temperature = use_temperature
 
         self._coder = Coder.create(
             main_model=main_model,
@@ -52,6 +56,7 @@ class AiderCoder(Agent):
         fnames: str | list[str],
         workspace: Workspace,
         version: int,
+        bug_history: Optional[str] = None,
         max_retries=1
     ) -> str:
         # Update history file
@@ -68,9 +73,19 @@ class AiderCoder(Agent):
         for fname in abs_fnames:
             self._coder.abs_fnames.add(fname)
 
-        coder_out = self._coder.run(instruction)
+        code_prompt = coder_prompts.basic_code_prompt(
+            fnames=fnames,
+            instruction=instruction,
+            packages=workspace.packages,
+            bug_history=bug_history
+        )
+
+        coder_out = self._coder.run(code_prompt)
 
         if self._coder.summarizer_thread:
             self._coder.summarizer_thread.join()
 
         return coder_out
+
+    def flush_logs(self, path: str):
+        pass

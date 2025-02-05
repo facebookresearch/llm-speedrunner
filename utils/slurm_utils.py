@@ -10,6 +10,7 @@ import subprocess
 
 class JobStatus(Enum):
     COMPLETED = "COMPLETED"
+    PREEMPTED = "PREEMPTED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
     UNKNOWN = "UNKNOWN"
@@ -82,6 +83,7 @@ class JobObserver:
         then calls the user-specified callback with a JobResult.
         """
         while not job.done():
+            print('polling job', job, job.done(), job.state.upper(), flush=True)
             await asyncio.sleep(poll_interval)
 
         # Once we exit the loop, the job is done from Submitit's perspective,
@@ -114,6 +116,9 @@ class JobObserver:
         """
         if slurm_state == "COMPLETED":
             return JobStatus.COMPLETED
+
+        elif slurm_state == "RUNNING":
+            return JobStatus.PREEMPTED
 
         elif slurm_state in ("CANCELLED"):
             return JobStatus.CANCELLED

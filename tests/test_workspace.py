@@ -4,7 +4,7 @@ import os
 import pytest
 import shutil
 
-from scientist.core.types import ExperimentConfig, ExperimentRecord, ExperimentHistory
+from scientist.core.types import ExperimentConfig
 from scientist.core.workspace import Workspace
 
 
@@ -48,7 +48,6 @@ def workspace_factory(tmp_path_factory):
         ws = Workspace(
             root_path=str(root_path),
             template_dir=str(template_dir),
-            track_history=True
         )
 
         return ws, root_path, template_dir
@@ -68,6 +67,7 @@ def check_files_with_contents_exist(file_contents: dict[str, str]):
                 f"Copied file at {abs_path} content should match original."
             )
 
+
 class TestNewWorkspace:
     """
     A test class that shares a single Workspace instance across all methods.
@@ -85,8 +85,6 @@ class TestNewWorkspace:
             type(self).root_path, 
             type(self).template_dir
         ) = workspace_factory(template_contents)
-
-        print('root path', self.root_path)
 
     def test_root_directory_created(self):
         assert os.path.exists(self.root_path), "Root directory should be created."
@@ -134,6 +132,9 @@ class TestNewWorkspace:
         file_contents = {self.workspace.resolve_path(k, version=version): v for k, v in self.template_contents.items()}
         check_files_with_contents_exist(file_contents)
 
+        assert version in self.workspace.version_infos
+        assert len(self.workspace.version_infos) == self.workspace.n_versions
+
     def test_create_version_from_path(self):
         self.workspace.create_version(from_path=self.template_dir)
 
@@ -143,6 +144,9 @@ class TestNewWorkspace:
 
         file_contents = {self.workspace.resolve_path(k, version=version): v for k, v in self.template_contents.items()}
         check_files_with_contents_exist(file_contents)
+
+        assert version in self.workspace.version_infos
+        assert len(self.workspace.version_infos) == self.workspace.n_versions
 
     def test_create_version_from_version(self):
         parent_version = '1'
@@ -163,6 +167,16 @@ class TestNewWorkspace:
 
         file_contents = {self.workspace.resolve_path(k, version=version): v for k, v in rel_file_contents.items()}
         check_files_with_contents_exist(file_contents)
+
+        assert version in self.workspace.version_infos
+        assert len(self.workspace.version_infos) == self.workspace.n_versions
+
+        # @todo: Check children pointer created corrected
+        parent_metadata_path = self.workspace.resolve_path('meta.json', version=parent_version)
+        assert os.path.exists(parent_metadata_path)
+        with open(parent_metadata_path, 'r') as f:
+            parent_metadata = json.loads(f.read())
+            assert parent_metadata['children'] == [version]
 
     def test_ls(self):
         contents = self.workspace.ls()
@@ -204,20 +218,154 @@ class TestNewWorkspace:
         versions = ['1', '2']
         scores = [1.0, 2.0]
         for version, score in zip(versions, scores):
-            res_path = self.workspace.resolve_path('results.json', version=version)
-            with open(res_path, 'w') as f:
-                res = dict(metrics={'score': score})
-                json.dump(res, f)
+            res = dict(metrics={'score': score})
+            self.workspace.save_to_file(json.dumps(res), 'results.json', version=version)
 
-        top_k = self.workspace.get_top_k_versions('score', k=2)
+        top_k = [x.version for x in self.workspace.get_top_k_versions('score', k=2)]
 
         assert top_k == ['2', '1']
 
-        top_k = self.workspace.get_top_k_versions('score', k=1)
+        top_k = [x.version for x in self.workspace.get_top_k_versions('score', k=1)]
         assert top_k == ['2']
 
-        top_k = self.workspace.get_top_k_versions('score')
-        assert top_k == ['2']
+        top_k = [x.version for x in self.workspace.get_top_k_versions('score')]
+        assert top_k == ['2'] 
 
-        top_k = self.workspace.get_top_k_versions('score', from_versions=['1'])
+        top_k = [x.version for x in self.workspace.get_top_k_versions('score', from_versions=['1'])]
         assert top_k == ['1']
+
+    def test_version_reload_on_save_to_file(self):
+        self.workspace.save_to_file(json.dumps(dict(metrics={'score': 5.0})), 'results.json', version='1')
+        assert self.workspace.version_infos['1'].results == {'metrics': {'score': 5.0}}
+
+    def test_mark_as_buggy_from_version(self):
+        stable_version = self.workspace.create_version()
+
+        buggy_version_one = self.workspace.create_version(from_version=stable_version)
+        self.workspace.mark_as_buggy_from_version(version=buggy_version_one, from_version=stable_version)
+
+        buggy_version_two = self.workspace.create_version(from_version=buggy_version_one)
+        self.workspace.mark_as_buggy_from_version(version=buggy_version_two, from_version=buggy_version_one)
+
+        assert self.workspace.version_infos[buggy_version_one].bug_depth == 1
+        assert self.workspace.version_infos[buggy_version_one].stable_ancestor_version == stable_version
+
+        assert self.workspace.version_infos[buggy_version_two].bug_depth == 2
+        assert self.workspace.version_infos[buggy_version_two].stable_ancestor_version == stable_version
+
+
+# @todo: Test workpace view history
+class TestWorkspaceViewHistory:
+    """
+    A test class that shares a single Workspace instance across all methods.
+    """
+    @pytest.fixture(autouse=True, scope="class")
+    def _setup_class(self, workspace_factory):
+        template_contents = {
+            "test.txt": "These are the droids you are looking for.",
+            "data/test_data.csv": "name,role\nnikola tesla,scientist\n"
+        }
+        type(self).template_contents = template_contents
+
+        (
+            type(self).workspace, 
+            type(self).root_path, 
+            type(self).template_dir
+        ) = workspace_factory(template_contents)
+
+        # Set up history
+        #
+        # [v_1]
+        #  |
+        # [v_2]--bug--[v_4]--bug--[v_5]--bug--[v_6]--[v_7]
+        #  |
+        # [v_3]
+        #
+        self.workspace.create_version(from_version='1')  # v_2
+        self.workspace.create_version(from_version='2')  # v_3
+
+        self.workspace.create_version(from_version='2')  # v_4
+        self.workspace.create_version(from_version='4')  # v_5
+        self.workspace.create_version(from_version='5')  # v_6
+        self.workspace.create_version(from_version='6')  # v_7
+
+        self.workspace.mark_as_buggy_from_version(version='4', from_version='2')
+        self.workspace.mark_as_buggy_from_version(version='5', from_version='4')
+        self.workspace.mark_as_buggy_from_version(version='6', from_version='5')
+
+    def test_view_history_default_only_good(self):
+        history = self.workspace.view_history(as_string=False)
+        assert len(history) == 4  # v_1, v_2, v_3, v_7 are good
+
+    def test_view_history_max_len(self):
+        history = self.workspace.view_history(as_string=False, max_len=1)
+        assert len(history) == 1
+
+    def test_view_history_incl_all(self):
+        history = self.workspace.view_history(as_string=False, incl_buggy_versions=True)
+        assert len(history) == self.workspace.n_versions
+
+    def test_view_history_incl_buggy_versions_only(self):
+        history = self.workspace.view_history(as_string=False, incl_good_versions=False, incl_buggy_versions=True)
+        assert len(history) == 3
+
+    # Test from_version conditions for ancestors and descendents
+    def test_view_history_from_version_default_ancestors_only(self):
+        history = self.workspace.view_history(as_string=False, from_version='3')
+        assert len(history) == 2
+        assert [info.version for info in history] == ['2', '1']
+
+    def test_view_history_from_version_ancestors_only_depth_one(self):
+        history = self.workspace.view_history(as_string=False, from_version='3', ancestor_depth=1)
+        assert len(history) == 1
+        assert [info.version for info in history] == ['2']
+
+    def test_view_history_from_version_incl_descendents_only(self):
+        history = self.workspace.view_history(
+            as_string=False, from_version='2', incl_ancestors=False, incl_descendents=True
+        )
+        assert len(history) == 2
+        assert [info.version for info in history] == ['7', '3']
+
+    def test_view_history_from_version_incl_descendents_only_depth_one(self):
+        history = self.workspace.view_history(
+            as_string=False, from_version='2', incl_ancestors=False, incl_descendents=True, descendent_depth=1
+        )
+        assert len(history) == 1
+        assert [info.version for info in history] == ['3']
+
+    def test_view_history_from_version_incl_descendents_incl_buggy_versions_only(self):
+        history = self.workspace.view_history(
+            as_string=False,
+            from_version='2',
+            incl_ancestors=False,
+            incl_descendents=True,
+            incl_buggy_versions=True,
+            incl_good_versions=False,
+        )
+        assert len(history) == 3
+        assert [info.version for info in history] == ['6', '5', '4']
+
+    def test_view_history_from_version_incl_descendents_incl_buggy_versions_only_depth_one(self):
+        history = self.workspace.view_history(
+            as_string=False,
+            from_version='2',
+            incl_ancestors=False,
+            incl_descendents=True,
+            incl_buggy_versions=True,
+            incl_good_versions=False,
+            descendent_depth=1
+        )
+        assert len(history) == 1
+        assert [info.version for info in history] == ['4']
+
+    def test_view_history_from_version_all(self):
+        history = self.workspace.view_history(
+            as_string=False,
+            from_version='4',
+            incl_ancestors=True,
+            incl_descendents=True,
+            incl_buggy_versions=True,
+        )
+        assert len(history) == 5
+        assert [info.version for info in history] == ['7', '6', '5', '2', '1']

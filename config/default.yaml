@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - task: collatz
+  - task: nanogpt_10112024
   - science_runner: bon
   - ideator: base
   - coder: aider
@@ -30,6 +30,20 @@ workspace_args:
   _target_: core.workspace.Workspace
   root_path: ${oc.env:PWD}/workspaces/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
   template_dir: ${oc.env:PWD}/workspace_templates/${template_dirname}
+  packages:
+    - numpy
+    - numba
+    - pandas
+    - torch
+    - cudatoolkit
+    - scipy
+    - torchvision
+  ignore_list:
+    - assistant_history.jsonl
+    - ideator_history.jsonl
+    - coder_history.jsonl
+    - aider.txt
+    - meta.json
 
 assistant_args:
   _target_: core.agent.Agent

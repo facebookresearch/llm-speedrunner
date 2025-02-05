@@ -49,8 +49,14 @@ class BoNScienceRunner(ScienceRunner):
 		self.set_results_for_version(version, job_results)
 
 		self.assistant.flush_logs(
-			self.workspace.resolve_path('llm_history.jsonl', 
+			self.workspace.resolve_path('assistant_history.jsonl', 
 			version=version)
+		)
+		self.ideator.flush_logs(
+			self.workspace.resolve_path('ideator_history.jsonl')
+		)
+		self.ideator.flush_logs(
+			self.workspace.resolve_path('coder_history.jsonl')
 		)
 
 	async def _run_exp(
@@ -58,11 +64,23 @@ class BoNScienceRunner(ScienceRunner):
 		version: str, 
 		metadata: Optional[dict[str, str | int | float, bool]] = None
 	):
+		bug_history = self.workspace.view_history(
+			from_version=version,
+			max_len=3,
+			incl_good_versions=False,
+			incl_buggy_versions=True,
+			incl_ancestors=False,
+			incl_descendents=True,
+			descendent_depth=1,
+			as_string=True
+		)
+
 		coder_out = self.coder.code(
 			instruction=self.code_instructions,
 			fnames=self.fnames,
 			workspace=self.workspace,
 			version=version,
+			bug_history=bug_history,
 			max_retries=self.max_retries
 		)
 		print(f'Coder out:\n{coder_out}')
@@ -121,12 +139,25 @@ class BoNScienceRunner(ScienceRunner):
 		open_version = None
 		for i in range(n_iterations):
 			# Request next hypotheses
+			relevant_history = None
+			if open_version is not None:
+				relevant_history = self.workspace.view_history(
+					from_version=open_version,
+					incl_good_versions=True,
+					incl_buggy_versions=True,
+					incl_ancestors=False,
+					incl_descendents=True,
+					descendent_depth=1,
+					as_string=True
+				)
+
 			hypotheses, _ = self.ideator.ideate(
 				instruction=self.idea_instructions,
 				fnames=self.fnames,
 				workspace=self.workspace,
 				version='1' if not open_version else open_version,
 				n_ideas=self.n_hypotheses,
+				history=relevant_history,
 				max_retries=1
 			)
 
@@ -179,4 +210,4 @@ class BoNScienceRunner(ScienceRunner):
 				from_versions=current_versions,
 				lower_is_better=self.lower_is_better,
 				k=1
-			)[0]
+			)[0].version

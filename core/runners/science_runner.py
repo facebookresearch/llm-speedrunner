@@ -10,7 +10,7 @@ from core.types import ExperimentConfig, SlurmConfig
 from core.agent import Agent
 from core.coders.base import Coder
 from core.ideators.base import Ideator
-from core.workspace import Workspace
+from core.workspace import Workspace, VersionInfo
 from core.prompts import analysis_prompts
 from core import validators
 
@@ -63,9 +63,17 @@ class ScienceRunner:
 		log_out = job_results.log_out[0][-self.max_log_len:]
 		log_err = job_results.log_err[0][-self.max_log_len:]
 		outcome_summary = self.assistant.act(
-			analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(log_out=log_out, log_err=log_err)
+			analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(log_out=log_out, log_err=log_err),
+			max_retries=self.max_retries
 		)
 		print(f'outcome_summary:\n{outcome_summary}')
+
+		version_info = self.workspace.version_infos[version]
+		if job_results.status == slurm_utils.JobStatus.FAILED:  # Update meta
+			self.workspace.mark_as_buggy_from_version(
+				version=version, 
+				from_version=version_info.parent_version
+			)
 
 		# Parse metrics from log file
 		metrics = {}
@@ -88,7 +96,8 @@ class ScienceRunner:
 			metric_types_str = json.dumps({k: type(v).__name__ for k, v in summary.get('metrics', {}).items()})
 			metrics_response = self.assistant.act(
 				analysis_prompts.PARSE_METRICS_FROM_LOGS.format(logs=log_out, metric_types=metric_types_str),
-				validator=lambda x: validators.validate_json(x, metric_types)
+				validator=lambda x: validators.validate_json(x, metric_types),
+				max_retries=self.max_retries
 			)
 			print(f'metrics_response:\n{metrics_response}')
 			if metrics_response:

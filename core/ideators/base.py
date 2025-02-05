@@ -20,22 +20,18 @@ class Ideator(Agent):
 		workspace: Workspace,
 		version: int,
 		n_ideas=1,
+		history: Optional[str] = None,
 		max_retries=1
 	) -> tuple[list[str], Optional[dict[str, str]]]:
-		fname = None
-		if len(fnames) > 1:
-			raise ValueError('The base Ideator only supports a single fname.')
-		else:
-			fname = fnames[0]
-
-		code = workspace.view(fname, version=version)
+		abs_paths = [workspace.resolve_path(x, version=version) for x in fnames]
+		code = workspace.view(abs_paths, version=version)
 		summary = workspace.view('results.json', version=version)
 
-		ideation_prompt = ideator_prompts.GENERATE_CODE_HYPOTHESIS.format(
-			fname=fname,
+		ideation_prompt = ideator_prompts.basic_ideation_prompt(
 			code=code,
 			summary=summary,
-			instruction=instruction
+			instruction=instruction,
+			history=history
 		)
 
 		res_dict = json.loads(self.act(

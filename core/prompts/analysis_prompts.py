@@ -7,7 +7,7 @@ SUMMARIZE_LOGS_PROMPT = """Task: Produce a succinct summary of the following std
 # stderr logs
 {log_err}
 
-Respond with just your summary text with no extra commentary and no extra formatting.
+Respond with just your summary text with no extra commentary and no extra formatting. If appropriate, include the most useful stderr logs for debugging in code blocks fenced by triple ticks.
 """
 
 
