@@ -49,13 +49,9 @@ This codebase is designed with the following goals in mind:
 
 
 ### The core science loop
-To maximize flexibility and speed early on, the scientist experimentation loop for each task, e.g. speedrunning nanoGPT, is implemented in its own script, e.g. `climb_nanogpt.py`.
-
-The core science loop in each script is implemented via a subclass of ScienceRunner (e.g. `NanoGPTClimber`) implements a `run(n_iterations: int)` method, which executes the scientist loop several times.
-
-While the core run logic can currently be free-form, we plan to fork ScienceRunner into two variations: 
-- `ScienceRunner` will remain unstructured in its run logic
-- `BoNScienceRunner`, which inherits from `ScienceRunner`, follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch of N hypotheses can be generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
+The science loop can be implemented via either of two existing runners (or with any custom logic via your own subclass of `ScienceRunner`): 
+- `ScienceRunner` is unstructured in its run logic, allowing for maximum flexibility.
+- `BoNScienceRunner` inherits from `ScienceRunner`, and follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch `n_hypotheses` hypotheses are generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
 
 In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Implementer` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.implementers` serve as central registries for Ideator and Implementer subclasses, making it easy to define combinations of ideator and implementer strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries. 
 
