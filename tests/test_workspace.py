@@ -91,9 +91,16 @@ class TestNewWorkspace:
         assert os.path.isdir(self.root_path), "Root path should be a directory."
 
     def test_version_0_created(self):
+        version_path = self.workspace.resolve_path(version='0')
+        assert os.path.exists(version_path), "v_0 path exists."
+        assert os.path.isdir(version_path), "v_0 path is a directory."
+
         version_path = self.workspace.resolve_path(version='1')
         assert os.path.exists(version_path), "v_1 path exists."
         assert os.path.isdir(version_path), "v_1 path is a directory."
+
+        version_path = self.workspace.resolve_path(version='2')
+        assert not os.path.exists(version_path), "v_2 does not path exist."
 
     def test_initial_n_versions(self):
         assert self.workspace.n_versions == 2  # v_0 and v_1

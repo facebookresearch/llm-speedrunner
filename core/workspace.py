@@ -88,13 +88,6 @@ class Workspace:
             self.create_version(from_path=template_dir)
             self.create_version(from_version='0')
 
-        # Copy files from cp_dir
-        if template_dir is not None:
-            fs_utils.cp_dir(template_dir, 
-                self.resolve_path(version=str(self.n_versions)),
-                ignore_list=self.ignore_list
-            )
-
     def _get_version_dirs(self) -> list[str]:
         version_dirs = []
 
@@ -102,7 +95,7 @@ class Workspace:
             abs_dir_path = self.resolve_path(dirname)
             match = VERSION_REGEX.match(dirname)  # Match pattern and extract integer
             if os.path.isdir(abs_dir_path) and match:
-                version_dirs.append((int(match.group(1)), abs_dir_path))  # Store (integer, path)
+                version_dirs.append((match.group(1), abs_dir_path))  # Store (integer, path)
 
         version_dirs.sort(key=lambda x: x[0])
 
@@ -162,7 +155,7 @@ class Workspace:
                 )
             )
 
-        if len(infos) == 1:
+        if isinstance(version, str) and len(infos) == 1:
             return infos[0]
         else:
             return infos
@@ -192,6 +185,8 @@ class Workspace:
         self.n_versions += 1
 
         os.makedirs(new_version_dir_path, exist_ok=True)
+
+        src_path = None
         if from_path is not None:
             src_path = fs_utils.expand_path(from_path)
         elif from_version is not None:
@@ -371,7 +366,8 @@ class Workspace:
 
             if score is None:
                 score = default_value
-            score *= flip_coef
+            else:
+                score *= flip_coef
 
             if not isinstance(score, float):
                 try:

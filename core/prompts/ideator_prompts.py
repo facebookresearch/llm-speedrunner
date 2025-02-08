@@ -15,6 +15,8 @@ Then, come up with a new hypothesis for how you can improve the code to achieve 
 
 {instruction}
 
+Be methodical and measured in suggesting changes. Avoid suggesting too many changes to the code at once. Remember: Quality over quantity.
+
 Structure your response as a single JSON in the format below. Do not include any extra commentary in your final response.
 
 {{

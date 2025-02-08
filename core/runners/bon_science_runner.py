@@ -165,8 +165,8 @@ class BoNScienceRunner(ScienceRunner):
 				max_retries=1
 			)
 
-			current_versions = []
-			if open_version is not None:
+			current_versions = ['0']
+			if open_version is not None and open_version not in current_versions:
 				current_versions.append(open_version)  # Always consider best so far
 
 			version2metadata = {}
