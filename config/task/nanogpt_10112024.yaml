@@ -3,6 +3,6 @@
 defaults:
   - nanogpt
 
-template_dirname: nanogpt_101124
+template_dirname: nanogpt_10112024
 
 n_iterations: 10

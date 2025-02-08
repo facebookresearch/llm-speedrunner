@@ -10,11 +10,14 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
 - [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
 - [x] Add support diff-based editors (e.g. via Aider-based Implementers)
-- [ ] Support MetaGen and third-party LLM APIs in `core.llm_client`.
+- [x] Support third-party LLM APIs in Azure in `core.llm_client` and `core.coder.aider` (o1-preview support added.
+- [ ] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
+- [ ] Add a basic web interface to explore a running or previous scientist run.
 
 ## Run examples
 
-First, spin up an instance of r1 (32B):
+#### r1
+First, spin up an instance of `r1-32b`:
 
 ```
 python serve_vllm.py
@@ -22,10 +25,16 @@ python serve_vllm.py
 
 Find the node id for this vllm job on Slurm and run one of the scientist scripts:
 ```
-python launch_scientist.py <vllm node id>
+python launch_scientist.py node_id=<vllm node id> model=r1_32b task=collatz
 ```
 
-By default `launch_scientist.py` will run the scientist on the task defined in `config/task/collatz.yaml`. You can change the default task by updating the `task` field under the default settings in `default.yaml` to the name of another config file in `config/task/`. For instructions on adding a new task, see the "Adding a new task" section below.
+#### o1-preview
+To use `o1-preview`, you do not need to spin up a separate server, as requests go to Meta's Azure instance:
+```
+python launch_scientist.py model=o1_preview task=collatz
+```
+
+See the available models and tasks under `config/model` and `config/task` respectively. You can pass the name of any of these yaml files (without the extension) as the value for `launch_scientist.py`'s' model and task command-line arguments.
 
 
 ## Design
