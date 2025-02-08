@@ -53,10 +53,12 @@ class BoNScienceRunner(ScienceRunner):
 			version=version)
 		)
 		self.ideator.flush_logs(
-			self.workspace.resolve_path('ideator_history.jsonl')
+			self.workspace.resolve_path('ideator_history.jsonl',
+			version=version)
 		)
 		self.ideator.flush_logs(
-			self.workspace.resolve_path('coder_history.jsonl')
+			self.workspace.resolve_path('coder_history.jsonl',
+			version=version)
 		)
 
 	async def _run_exp(
@@ -145,8 +147,9 @@ class BoNScienceRunner(ScienceRunner):
 					from_version=open_version,
 					incl_good_versions=True,
 					incl_buggy_versions=True,
-					incl_ancestors=False,
+					incl_ancestors=True,
 					incl_descendents=True,
+					ancestor_depth=3,
 					descendent_depth=1,
 					as_string=True
 				)

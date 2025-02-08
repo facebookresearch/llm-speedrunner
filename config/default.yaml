@@ -1,6 +1,8 @@
 defaults:
   - _self_
-  - task: nanogpt_10112024
+  - secrets: default
+  - task: collatz
+  - model: r1_32b
   - science_runner: bon
   - ideator: base
   - coder: aider
@@ -14,8 +16,6 @@ hydra:
     dir: .
 
 node_id: dummy
-
-model_url: "http://${node_id}.fair-aws-h100-2.hpcaas:8000/v1"
 
 log_llm_metrics: True
 
@@ -47,6 +47,8 @@ workspace_args:
 
 assistant_args:
   _target_: core.agent.Agent
+  secrets: ${secrets}
   model_url: ${model_url}
+  model_name: ${model_name}
   system_prompt: ${system_prompt}
   log_llm_metrics: ${log_llm_metrics}
