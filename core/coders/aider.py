@@ -18,6 +18,14 @@ NAME_TO_AIDER_MODEL_NAME = {
 }
 
 
+def get_aider_model_name(model_name: str) -> str:
+    name = NAME_TO_AIDER_MODEL_NAME.get(model_name, model_name)
+    if not name.startswith('openai/') and not name.startswith('azure/'):
+        name = f'openai/{model_name}'
+
+    return name
+
+
 def set_env_vars_fo_model(model_name: str, model_url: Optional[str] = None):
     if model_name in ['o1-preview', 'gpt-4o']:
         os.environ['AZURE_API_BASE'] = model_url
@@ -50,8 +58,9 @@ class AiderCoder(Agent):
         io = InputOutput(yes=True, chat_history_file=chat_history_file)
 
         set_env_vars_fo_model(model_name, model_url)
-        
-        main_model = Model(NAME_TO_AIDER_MODEL_NAME.get(model_name, model_name))
+            
+        aider_model_name = get_aider_model_name(model_name)
+        main_model = Model(aider_model_name)
         if use_temperature is not None:
             main_model.use_temperature = use_temperature
 

@@ -16,7 +16,7 @@ class Agent:
         if secrets:
             for k, v in secrets.items():
                 if k.endswith('OPENAI_API_KEY'):
-                    api_key = k
+                    api_key = v
                     break
 
         self.llm = LLMClient(

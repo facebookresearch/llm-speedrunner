@@ -18,6 +18,17 @@ from utils import fs_utils
 VERSION_REGEX = re.compile(r'^v_(\d+)$')
 
 
+VERSION_SUMMARY_TEMPLATE = """Version: {version}
+Parent version: {parent_version}
+Hypothesis: {hypothesis}
+Results: 
+{metrics}
+Has bugs? {has_bugs}
+Outcome summary:
+{outcome_summary}
+"""
+
+
 @dataclasses.dataclass
 class VersionInfo:
     version: str  # e.g '1', '2', etc
@@ -33,16 +44,7 @@ class VersionInfo:
         )
         outcome_summary = self.results.get('outcome_summary', '')
 
-        summary = """Version: {version}
-        Parent version: {parent_version}
-        Hypothesis: {hypothesis}
-        Results: 
-        {metrics}
-        Outcome summary:
-        {outcome_summary}
-
-        Has bugs? {has_bugs}
-        """.format(
+        summary = VERSION_SUMMARY_TEMPLATE.format(
             version=self.version, 
             parent_version=self.parent_version,
             hypothesis=self.results.get('hypothesis', ''),
@@ -84,6 +86,7 @@ class Workspace:
 
         if self.n_versions == 0:
             self.create_version(from_path=template_dir)
+            # self.create_version(from_version='0')
 
         # Copy files from cp_dir
         if template_dir is not None:
@@ -391,13 +394,13 @@ class Workspace:
     def get_buggy_versions(self, is_leaf=True, max_bug_depth=3) -> list[VersionInfo]:
         """Return all versions where is_buggy=True and <= max_bug_depth."""
         return [
-            info for info in self.version_infos
+            info for _, info in self.version_infos.items()
             if (not is_leaf or info.children is None) and info.bug_depth <= max_bug_depth
         ]
 
     def get_good_versions(self) -> list[VersionInfo]:
         """Return all versions that are not buggy."""
-        return [info for info in self.version_infos if info.bug_depth == 0]
+        return [info for _, info in self.version_infos.items() if info.bug_depth == 0]
 
     def view_history(
         self,

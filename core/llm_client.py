@@ -83,6 +83,7 @@ class LLMClient:
             show_thinking (bool): If true, preserves any leading <thinking>...</thinking> tokens.
 
         """
+        print('PROMPT:\n', prompt)
         if system_prompt and self.is_system_prompt_enabled:
             messages = [{"role": "system", "content": system_prompt}]
         else:
