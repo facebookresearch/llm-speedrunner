@@ -482,7 +482,7 @@ class Workspace:
             sorted_infos = sorted_infos[:max_len]
 
         if as_string:
-            divider = '-'*8
+            divider = '-'*8 + '\n'
             summary = divider.join([x.get_summary_string() for x in sorted_infos])
 
             return summary
