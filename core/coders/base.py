@@ -15,6 +15,7 @@ class Coder(Agent):
 	def code(
 		self, 
 		instruction: str,
+        ideas: str,
 		fnames: list[str],
 		workspace: Workspace,
 		version: int,
@@ -27,6 +28,7 @@ class Coder(Agent):
 		update_prompt = coder_prompts.basic_code_prompt(
 			fnames=fnames,
 			instruction=instruction,
+			ideas=ideas,
 			code=code,
 			packages=workspace.packges,
 			bug_history=bug_history

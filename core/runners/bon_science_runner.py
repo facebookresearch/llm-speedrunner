@@ -79,6 +79,7 @@ class BoNScienceRunner(ScienceRunner):
 
 		coder_out = self.coder.code(
 			instruction=self.code_instructions,
+			ideas=metadata.get('hypothesis'),
 			fnames=self.fnames,
 			workspace=self.workspace,
 			version=version,

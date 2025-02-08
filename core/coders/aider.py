@@ -81,6 +81,7 @@ class AiderCoder(Agent):
     def code(
         self, 
         instruction: str,
+        ideas: Optional[str],
         fnames: str | list[str],
         workspace: Workspace,
         version: int,
@@ -104,6 +105,7 @@ class AiderCoder(Agent):
         code_prompt = coder_prompts.basic_code_prompt(
             fnames=fnames,
             instruction=instruction,
+            ideas=ideas,
             packages=workspace.packages,
             bug_history=bug_history
         )
