@@ -86,7 +86,7 @@ class Workspace:
 
         if self.n_versions == 0:
             self.create_version(from_path=template_dir)
-            # self.create_version(from_version='0')
+            self.create_version(from_version='0')
 
         # Copy files from cp_dir
         if template_dir is not None:
@@ -187,9 +187,9 @@ class Workspace:
         from_version: Optional[str] = None
     ) -> int:
         """Create new version directory, copying all contents in from_path."""
-        self.n_versions += 1
         new_version = str(self.n_versions)
         new_version_dir_path = self.resolve_path(version=new_version)
+        self.n_versions += 1
 
         os.makedirs(new_version_dir_path, exist_ok=True)
         if from_path is not None:
@@ -230,7 +230,7 @@ class Workspace:
 
         self.version_infos[new_version] = self.load_version_info(version=new_version)
 
-        return str(self.n_versions)
+        return new_version
 
     def mark_as_buggy_from_version(self, version: str, from_version: Optional[str] = None):
         if from_version:

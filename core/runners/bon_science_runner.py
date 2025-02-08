@@ -178,7 +178,7 @@ class BoNScienceRunner(ScienceRunner):
 					version = '1'
 				elif i == 0:
 					# All first generation hypotheses branch from template
-					version = self.workspace.create_version()
+					version = self.workspace.create_version(from_version='0')
 				else:
 					# All other hypotheses branch from best version so far
 					prev_version = open_version

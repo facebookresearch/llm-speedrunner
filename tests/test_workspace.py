@@ -96,7 +96,7 @@ class TestNewWorkspace:
         assert os.path.isdir(version_path), "v_1 path is a directory."
 
     def test_initial_n_versions(self):
-        assert self.workspace.n_versions == 1
+        assert self.workspace.n_versions == 2  # v_0 and v_1
 
     def test_copy_from_template_dir(self):
         file_contents = {self.workspace.resolve_path(k, version='1'): v for k, v in self.template_contents.items()}
@@ -123,9 +123,7 @@ class TestNewWorkspace:
             assert f.read() == file_content, f'File content should be "{file_content}"'
 
     def test_create_version_default(self):
-        self.workspace.create_version()
-
-        version = str(self.workspace.n_versions)
+        version = self.workspace.create_version()
         version_path = self.workspace.resolve_path(version=version)
         assert os.path.exists(version_path)
 
@@ -136,9 +134,7 @@ class TestNewWorkspace:
         assert len(self.workspace.version_infos) == self.workspace.n_versions
 
     def test_create_version_from_path(self):
-        self.workspace.create_version(from_path=self.template_dir)
-
-        version = str(self.workspace.n_versions)
+        version = self.workspace.create_version(from_path=self.template_dir)
         version_path = self.workspace.resolve_path(version=version)
         assert os.path.exists(version_path)
 
@@ -150,8 +146,7 @@ class TestNewWorkspace:
 
     def test_create_version_from_version(self):
         parent_version = '1'
-        self.workspace.create_version(from_version=parent_version)
-        version = str(self.workspace.n_versions)
+        version = self.workspace.create_version(from_version=parent_version)
         version_path = self.workspace.resolve_path(version=version)
         assert os.path.exists(version_path)
 
@@ -180,7 +175,7 @@ class TestNewWorkspace:
 
     def test_ls(self):
         contents = self.workspace.ls()
-        assert set(contents) == set([*[f'v_{i+1}' for i in range(self.workspace.n_versions)], 'root.txt']), (
+        assert set(contents) == set([*[f'v_{i}' for i in range(self.workspace.n_versions)], 'root.txt']), (
             'Unexpected contents.'
         )
 
@@ -295,7 +290,7 @@ class TestWorkspaceViewHistory:
 
     def test_view_history_default_only_good(self):
         history = self.workspace.view_history(as_string=False)
-        assert len(history) == 4  # v_1, v_2, v_3, v_7 are good
+        assert len(history) == 5  # v_0, v_1, v_2, v_3, v_7 are good
 
     def test_view_history_max_len(self):
         history = self.workspace.view_history(as_string=False, max_len=1)
@@ -312,8 +307,8 @@ class TestWorkspaceViewHistory:
     # Test from_version conditions for ancestors and descendents
     def test_view_history_from_version_default_ancestors_only(self):
         history = self.workspace.view_history(as_string=False, from_version='3')
-        assert len(history) == 2
-        assert [info.version for info in history] == ['2', '1']
+        assert len(history) == 3
+        assert [info.version for info in history] == ['2', '1', '0']
 
     def test_view_history_from_version_ancestors_only_depth_one(self):
         history = self.workspace.view_history(as_string=False, from_version='3', ancestor_depth=1)
@@ -367,5 +362,5 @@ class TestWorkspaceViewHistory:
             incl_descendents=True,
             incl_buggy_versions=True,
         )
-        assert len(history) == 5
-        assert [info.version for info in history] == ['7', '6', '5', '2', '1']
+        assert len(history) == 6
+        assert [info.version for info in history] == ['7', '6', '5', '2', '1', '0']
