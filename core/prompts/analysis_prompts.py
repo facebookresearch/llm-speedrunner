@@ -1,4 +1,10 @@
-SUMMARIZE_LOGS_PROMPT = """Task: Produce a succinct summary of the following stdout and stderr logs for a job running on a compute cluster. Keep your summary below 500 words.
+SUMMARIZE_LOGS_PROMPT = """Task: Produce a succinct summary of the following stdout and stderr logs for a job running on a compute cluster. 
+- Your summary should consider whether the logs indicate whether the goal below was achieved or not.
+- Keep your summary below 500 words.
+
+# Job goal
+{goal}
+
 
 # stdout logs
 {log_out}

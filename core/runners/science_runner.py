@@ -63,7 +63,11 @@ class ScienceRunner:
 		log_out = job_results.log_out[0][-self.max_log_len:]
 		log_err = job_results.log_err[0][-self.max_log_len:]
 		outcome_summary = self.assistant.act(
-			analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(log_out=log_out, log_err=log_err),
+			analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(
+				goal=self.idea_instructions,
+				log_out=log_out,
+				log_err=log_err
+			),
 			max_retries=self.max_retries
 		)
 		print(f'outcome_summary:\n{outcome_summary}')
