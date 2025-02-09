@@ -364,16 +364,20 @@ class Workspace:
             metrics = info.results.get('metrics', {})
             score = metrics.get(selection_metric, None)
 
+            if not metrics.get('is_valid', True):
+                continue
+
             if score is None:
                 score = default_value
-            else:
-                score *= flip_coef
-
-            if not isinstance(score, float):
+            elif not isinstance(score, float):
                 try:
                     score = float(score)
                 except (ValueError, TypeError):
-                    pass
+                    continue
+
+            if score != default_value:
+                score *= flip_coef
+
             scores.append(score)
             valid_infos.append(info)
         

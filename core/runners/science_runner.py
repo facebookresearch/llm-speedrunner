@@ -72,13 +72,6 @@ class ScienceRunner:
         )
         print(f'outcome_summary:\n{outcome_summary}')
 
-        version_info = self.workspace.version_infos[version]
-        if job_results.status == slurm_utils.JobStatus.FAILED:  # Update meta
-            self.workspace.mark_as_buggy_from_version(
-                version=version, 
-                from_version=version_info.parent_version
-            )
-
         # Parse metrics from log file
         metrics = {}
         if self.metric_types is not None:
@@ -106,20 +99,30 @@ class ScienceRunner:
             print(f'metrics_response:\n{metrics_response}')
             if metrics_response:
                 metrics = json.loads(metrics_response)
+                metrics['is_valid'] = True
 
         # Reject if any metrics go below a floor threshold
         if self.metrics_at_least and any(metrics.get(key, float('inf')) < threshold 
                for key, threshold in self.metrics_at_least.items()):
-            metrics = {}
+            metrics['is_valid'] = False
 
         # Reject if any metrics exceed a ceiling threshold
         if self.metrics_at_most and any(metrics.get(key, float('-inf')) > threshold 
                for key, threshold in self.metrics_at_most.items()):
-            metrics = {}
+            metrics['is_valid'] = False
 
         # In the worst case, default to empty metrics with previous keys
         if not metrics:
             metrics = {k: None for k, _ in summary.get('metrics', {}).items()}
+            metrics['is_valid'] = False
+
+        # Update meta based on whether job failed or failed to produce usable metrics
+        version_info = self.workspace.version_infos[version]
+        if not metrics['is_valid'] or job_results.status == slurm_utils.JobStatus.FAILED:  # Update meta
+            self.workspace.mark_as_buggy_from_version(
+                version=version, 
+                from_version=version_info.parent_version
+            )
 
         job_results = {
             'status': job_results.status.value,

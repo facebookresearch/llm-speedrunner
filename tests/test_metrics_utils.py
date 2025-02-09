@@ -36,7 +36,7 @@ def test_extract_best_line_metrics_higher_is_better():
 		selection_metric='acc',
 	)
 
-	assert metrics == {'acc': 0.98, 'loss': 0.09, 'epoch': 3}
+	assert metrics == {'acc': 0.98, 'loss': 0.09, 'epoch': 3, 'is_valid': True}
 
 
 def test_extract_best_line_metrics_lower_is_better():
@@ -48,7 +48,7 @@ def test_extract_best_line_metrics_lower_is_better():
 		lower_is_better=True
 	)
 
-	assert metrics == {'acc': 0.98, 'loss': 0.09, 'epoch': 3}
+	assert metrics == {'acc': 0.98, 'loss': 0.09, 'epoch': 3, 'is_valid': True}
 
 
 def test_extract_best_line_metrics_lower_is_better_at_most():
@@ -60,7 +60,7 @@ def test_extract_best_line_metrics_lower_is_better_at_most():
 		lower_is_better=True,
 	)
 
-	assert metrics == {'acc': 0.98, 'loss': 0.09, 'epoch': 3}
+	assert metrics == {'acc': 0.98, 'loss': 0.09, 'epoch': 3, 'is_valid': True}
 
 
 def test_extract_best_line_metrics_lower_is_better_at_least():
@@ -73,7 +73,7 @@ def test_extract_best_line_metrics_lower_is_better_at_least():
 		metrics_at_least={'epoch': 4}
 	)
 
-	assert metrics == {'acc': 0.97, 'loss': 0.10, 'epoch': 4}
+	assert metrics == {'acc': 0.97, 'loss': 0.10, 'epoch': 4, 'is_valid': True}
 
 
 def test_extract_best_line_metrics_lower_is_better_at_most():
@@ -86,7 +86,7 @@ def test_extract_best_line_metrics_lower_is_better_at_most():
 		metrics_at_most={'epoch': 2}
 	)
 
-	assert metrics == {'acc': 0.96, 'loss': 0.11, 'epoch': 2}
+	assert metrics == {'acc': 0.96, 'loss': 0.11, 'epoch': 2, 'is_valid': True}
 
 
 def test_extract_best_line_metrics_lower_is_better_mixed_thresholds():
@@ -100,7 +100,7 @@ def test_extract_best_line_metrics_lower_is_better_mixed_thresholds():
 		metrics_at_least={'loss': 0.12}
 	)
 
-	assert metrics == {'acc': 0.95, 'loss': 0.12, 'epoch': 1}
+	assert metrics == {'acc': 0.95, 'loss': 0.12, 'epoch': 1, 'is_valid': True}
 
 
 def test_extract_best_line_metrics_lower_is_better_no_match():
@@ -114,4 +114,5 @@ def test_extract_best_line_metrics_lower_is_better_no_match():
 		metrics_at_least={'epoch': 3}
 	)
 
-	assert metrics == {}
+	assert metrics == {'acc': 0.95, 'loss': 0.12, 'epoch': 1, 'is_valid': False}
+
