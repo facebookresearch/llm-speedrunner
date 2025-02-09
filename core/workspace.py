@@ -145,13 +145,14 @@ class Workspace:
             except:
                 meta = {}
 
+            parent_version = meta.get('parent', None)
             infos.append(VersionInfo(
                     version=version,
                     results=results,
                     bug_depth=meta.get('bug_depth', 0),
-                    parent_version=meta.get('parent', None),
+                    parent_version=parent_version,
                     children=meta.get('children', None),
-                    stable_ancestor_version=meta.get('stable_ancestor_version', None)
+                    stable_ancestor_version=meta.get('stable_ancestor_version', parent_version)
                 )
             )
 
@@ -484,6 +485,11 @@ class Workspace:
         if as_string:
             divider = '-'*8 + '\n'
             summary = divider.join([x.get_summary_string() for x in sorted_infos])
+
+            if len(sorted_infos) > 0:
+                header = f'{'-'*4 + 'Version log start' + '-'*4 + '\n'}'
+                footer = f'{'-'*4 + 'Version log end' + '-'*4 + '\n'}'
+                summary = f'{header}{summary}{footer}'
 
             return summary
         else:

@@ -10,7 +10,7 @@ from core.agent import Agent
 from core.coders.base import Coder
 from core.ideators.base import Ideator
 from core.runners.science_runner import ScienceRunner
-from core.workspace import Workspace
+from core.workspace import Workspace, VersionInfo
 
 import random
 import json
@@ -63,11 +63,13 @@ class BoNScienceRunner(ScienceRunner):
 
 	async def _run_exp(
 		self,
-		version: str, 
+		version_info: VersionInfo, 
 		metadata: Optional[dict[str, str | int | float, bool]] = None
 	):
+		version = version_info.version
+		history_from_version = version_info.stable_ancestor_version
 		bug_history = self.workspace.view_history(
-			from_version=version,
+			from_version=history_from_version,
 			max_len=3,
 			incl_good_versions=False,
 			incl_buggy_versions=True,
@@ -113,9 +115,10 @@ class BoNScienceRunner(ScienceRunner):
 
 	async def _run_eval(
 		self, 
-		version: str,
+		version_info: VersionInfo,
 		metadata: Optional[dict[str, str | int | float, bool]] = None
 	):
+		version = version_info.version
 		if self.eval_fname is not None:
 			eval_slurm_config = self.eval_slurm_config
 			if not eval_slurm_config:
@@ -144,8 +147,11 @@ class BoNScienceRunner(ScienceRunner):
 			# Request next hypotheses
 			relevant_history = None
 			if open_version is not None:
+				open_version_info = self.workspace.get_version_info(open_version)
+				history_from_version = open_version_info.stable_ancestor_version
 				relevant_history = self.workspace.view_history(
-					from_version=open_version,
+					from_version=history_from_version,
+					max_len=3,
 					incl_good_versions=True,
 					incl_buggy_versions=True,
 					incl_ancestors=True,
@@ -193,8 +199,9 @@ class BoNScienceRunner(ScienceRunner):
 				}
 
 				# Schedule experiments for all hypotheses
+				version_info = self.workspace.get_version_info(version)
 				await self._run_exp(
-					version=version,
+					version_info=version_info,
 					metadata=version2metadata[version]
 				)
 
@@ -203,8 +210,12 @@ class BoNScienceRunner(ScienceRunner):
 
 			if self.eval_fname is not None:
 				for version in current_versions:
+					version_info = self.workspace.get_version_info(version)
 					metadata = version2metadata[version]
-					self._run_eval(version=version, metadata=metadata)
+					self._run_eval(
+						version_info=version_info,
+						metadata=metadata
+					)
 
 				await slurm_utils.JobObserver.shared.wait()
 

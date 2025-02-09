@@ -91,23 +91,26 @@ class ScienceRunner:
             )
             metric_types = {k: Union[type(v), None] for k, v in summary.get('metrics', {}).items()}
             metric_types_str = json.dumps({k: type(v).__name__ for k, v in summary.get('metrics', {}).items()})
-            metrics_response = self.assistant.act(
-                analysis_prompts.PARSE_METRICS_FROM_LOGS.format(logs=log_out, metric_types=metric_types_str),
-                validator=lambda x: validators.validate_json(x, metric_types),
-                max_retries=self.max_retries
-            )
+            try:
+                metrics_response = self.assistant.act(
+                    analysis_prompts.PARSE_METRICS_FROM_LOGS.format(logs=log_out, metric_types=metric_types_str),
+                    validator=lambda x: validators.validate_json(x, metric_types),
+                    max_retries=self.max_retries
+                )
+            except:
+                metrics_response = {}
             print(f'metrics_response:\n{metrics_response}')
             if metrics_response:
                 metrics = json.loads(metrics_response)
                 metrics['is_valid'] = True
 
         # Reject if any metrics go below a floor threshold
-        if self.metrics_at_least and any(metrics.get(key, float('inf')) < threshold 
+        if self.metrics_at_least and (any(metrics.get(key) or float('inf')) < threshold 
                for key, threshold in self.metrics_at_least.items()):
             metrics['is_valid'] = False
 
         # Reject if any metrics exceed a ceiling threshold
-        if self.metrics_at_most and any(metrics.get(key, float('-inf')) > threshold 
+        if self.metrics_at_most and (any(metrics.get(key) or float('-inf')) > threshold 
                for key, threshold in self.metrics_at_most.items()):
             metrics['is_valid'] = False
 

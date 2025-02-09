@@ -10,4 +10,4 @@ coder_args:
   stream: True
   edit_format: "diff"
   max_reflections: 5
-  use_temperature: 0.6
+  use_temperature: 0.6  # Ignored for o1 models

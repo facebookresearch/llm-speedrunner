@@ -10,7 +10,7 @@ CHILD_BUG_INFO_COMPONENT = """To help with your task, here is a list summarizing
 """
 
 
-PACKAGE_INFO_COMPONENT= """Avoid installing any additional packages. Assume you have access to the following packages outside of the standard python packages:
+PACKAGE_INFO_COMPONENT= """**Never** install or ask to install any additional packages. Assume you have access to the following packages outside of the standard python packages:
 {packages}
 """
 
@@ -21,7 +21,8 @@ BASIC_CODE_PROMPT = """Your goal is to implement the following ideas for improvi
 
 {instruction}
 
-I trust you to make good decisions, so do not ask me for permission to make any code changes.
+I trust you to make good decisions, so do not ask me for permission to make any code changes. 
+Do not ever ask to install any additional packages. The answer will be no.
 
 In your final response, include ONLY the fully-functional updated code which implements ideas in the hypothesis above. Do NOT include any other content in your final response besides the code.
 """
