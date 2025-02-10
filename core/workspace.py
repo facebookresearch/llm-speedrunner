@@ -485,13 +485,14 @@ class Workspace:
             sorted_infos = sorted_infos[:max_len]
 
         if as_string:
-            divider = '-'*8 + '\n'
-            summary = divider.join([x.get_summary_string() for x in sorted_infos])
+            summary = '\n'.join(
+                [f'<info>{x.get_summary_string()}</info>' for x in sorted_infos]
+            )
 
             if len(sorted_infos) > 0:
-                header = f'{'-'*4 + 'Version log start' + '-'*4 + '\n'}'
-                footer = f'{'-'*4 + 'Version log end' + '-'*4 + '\n'}'
-                summary = f'{header}{summary}{footer}'
+                header = '<version_log>'
+                footer = '</version_log>'
+                summary = f'{header}\n{summary}\n{footer}'
 
             return summary
         else:

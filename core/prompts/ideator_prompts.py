@@ -42,10 +42,21 @@ JSON_FORMAT_INSTRUCTION = """Structure your response as a single JSON in the for
 }}
 """
 
+IGNORE_IDEAS_INFO_COMPONENT = """In your ideation, ignore the following ideas, which have already been proposed:
+
+{ideas}
+"""
+
 
 HISTORY_INFO_COMPONENT = """To help in this task, consider this list of previous changes you have attempted along with their outcomes.
 
 {history}
+"""
+
+
+KNOWLEDGE_INFO_COMPONENT = """You may also wish to consider the following relevant information to inform your idea generation.
+
+{knowledge}
 """
 
 
@@ -54,13 +65,27 @@ def basic_ideation_prompt(
 	summary: str, 
 	instruction: str,
 	is_debug=False,
+	ignore_ideas: Optional[list[str]] = None,
 	history: Optional[str] = None,
+	knowledge: Optional[str] = None,
 ):
 	instructions = [instruction]
+
+	if ignore_ideas:
+		ignore_list = '\n'.join([f'<idea>{x}</idea>' for x in ignore_ideas])
+		ignore_summary = f'<ignore_ideas>\n{ignore_list}\n</ignore_ideas>'
+		instructions.append(
+			IGNORE_IDEAS_INFO_COMPONENT.format(ideas=ignore_summary)
+		)
 
 	if history:
 		instructions.append(
 			HISTORY_INFO_COMPONENT.format(history=history)
+		)
+
+	if knowledge:
+		instructions.append(
+			KNOWLEDGE_INFO_COMPONENT.format(knowledge=knowledge)
 		)
 
 	full_instructions = '\n'.join(instructions) + '\n' + JSON_FORMAT_INSTRUCTION

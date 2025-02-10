@@ -52,3 +52,5 @@ assistant_args:
   model_name: ${model_name}
   system_prompt: ${system_prompt}
   log_llm_metrics: ${log_llm_metrics}
+
+knowledge_src_paths: []

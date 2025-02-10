@@ -9,6 +9,7 @@ from core.types import ExperimentConfig, SlurmConfig
 from core.agent import Agent
 from core.coders.base import Coder
 from core.ideators.base import Ideator
+from core.knowledge import KnowledgeStore
 from core.runners.science_runner import ScienceRunner
 from core.workspace import Workspace, VersionInfo
 
@@ -32,7 +33,8 @@ class BoNScienceRunner(ScienceRunner):
 		n_hypotheses=1,
 		n_initial_hypotheses=1,
 		debug_prob=0.0,
-		max_bug_depth: Optional[int] = 3
+		max_bug_depth: Optional[int] = 3,
+		knowledge_src_paths: Optional[list[str]] = None
 	):
 		super().__init__(
 			config=config,
@@ -50,6 +52,8 @@ class BoNScienceRunner(ScienceRunner):
 		self.n_initial_hypotheses = n_initial_hypotheses
 		self.debug_prob = debug_prob
 		self.max_bug_depth = max_bug_depth
+
+		self.knowledge = KnowledgeStore(src_paths=knowledge_src_paths)
 
 	def _job_callback(self, version: str, job_results: slurm_utils.JobResult):
 		self.set_results_for_version(version, job_results)
@@ -187,7 +191,9 @@ class BoNScienceRunner(ScienceRunner):
 					fnames=self.fnames,
 					workspace=self.workspace,
 					version='1' if not open_version else open_version,
+					ignore_ideas=hypotheses,  # Avoid duplicating previous ideas
 					history=relevant_history,
+					knowledge=self.knowledge.search(as_string=True),
 					max_retries=1
 				)
 				hypotheses.append(hypothesis)

@@ -19,7 +19,9 @@ class Ideator(Agent):
 		fnames: list[str],
 		workspace: Workspace,
 		version: int,
+		ignore_ideas: Optional[str] = None,
 		history: Optional[str] = None,
+		knowledge: Optional[str] = None,
 		max_retries=1
 	) -> tuple[list[str], Optional[dict[str, str]]]:
 		abs_paths = [workspace.resolve_path(x, version=version) for x in fnames]
@@ -32,7 +34,9 @@ class Ideator(Agent):
 			summary=summary,
 			instruction=instruction,
 			is_debug=version_info.bug_depth > 0,
-			history=history
+			ignore_ideas=ignore_ideas,
+			history=history,
+			knowledge=knowledge,
 		)
 
 		res_dict = json.loads(self.act(

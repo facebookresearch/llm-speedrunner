@@ -12,8 +12,8 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [x] Add support for diff-based editors (e.g. via Aider-based Implementers)
 - [x] Support third-party LLM APIs in Azure in `core.llm_client` and `core.coder.aider` (o1-preview support added.
 - [x] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
+- [x] Add ability to condition on prior knowledge when formulating hypotheses.
 - [ ] Gracefully handle preemption and re-entry.
-- [ ] Add ability to condition on prior knowledge when formulating hypotheses.
 - [ ] Add a basic web interface to explore a running or previous scientist run.
 
 ## Run examples
@@ -21,7 +21,7 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 #### r1
 First, spin up an instance of `r1-32b`:
 
-```
+```bash
 python serve_vllm.py
 ```
 
@@ -32,11 +32,30 @@ python launch_scientist.py node_id=<vllm node id> model=r1_32b task=collatz
 
 #### o1-preview
 To use `o1-preview`, you do not need to spin up a separate server, as requests go to Meta's Azure instance:
-```
+```bash
 python launch_scientist.py model=o1_preview task=collatz
 ```
 
+#### AIDE
+To run with AIDE-style search, explicitly set the science_runner type to `aide`:
+```bash
+python launch_scientist.py \
+	model=o1_preview \
+	science_runner=aide \
+	task=collatz
+```
+
+#### Knowledge sources
+To pass in external knowledge sources that then inform the idea generation stage, pass in a list of file paths or glob strings to the source files (note the quotations around the argument and value here):
+```bash
+python launch_scientist.py \
+	model=o1_preview \
+	task=collatz \
+	'knowledge_src_paths=["data/knowledge_nanogpt/*.md"]'
+```
+
 See the available models and tasks under `config/model` and `config/task` respectively. You can pass the name of any of these yaml files (without the extension) as the value for `launch_scientist.py`'s' model and task command-line arguments.
+
 
 
 ## Design
