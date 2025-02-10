@@ -16,8 +16,25 @@ Then, come up with a new hypothesis for how you can improve the code to achieve 
 {instruction}
 
 Be methodical and scientific in suggesting changes. Avoid suggesting too many conceptual changes to the code at once, though some individual ideas may require more lines of code change, which is okay. Remember: Quality over quantity.
+"""
 
-Structure your response as a single JSON in the format below. Do not include any extra commentary in your final response.
+
+DEBUG_CODE_HYPOTHESIS = """Study the current code:
+
+{code}
+
+Consider the issues described in the following summary, which occur when running the code:
+
+{summary}
+
+First summarize at a high level what the current implementation does and why the bug might arise. 
+Then come up with a hypothesis for how you can fix these issues with the code, while making sure that it achieves the following:
+
+{instruction}
+"""
+
+
+JSON_FORMAT_INSTRUCTION = """Structure your response as a single JSON in the format below. Do not include any extra commentary in your final response.
 
 {{
 	"summary": Summary of the current implementation,
@@ -36,6 +53,7 @@ def basic_ideation_prompt(
 	code: str,
 	summary: str, 
 	instruction: str,
+	is_debug=False,
 	history: Optional[str] = None,
 ):
 	instructions = [instruction]
@@ -45,9 +63,11 @@ def basic_ideation_prompt(
 			HISTORY_INFO_COMPONENT.format(history=history)
 		)
 
-	full_instructions = '\n'.join(instructions)
+	full_instructions = '\n'.join(instructions) + '\n' + JSON_FORMAT_INSTRUCTION
 
-	return GENERATE_CODE_HYPOTHESIS.format(
+	template = DEBUG_CODE_HYPOTHESIS if is_debug else GENERATE_CODE_HYPOTHESIS
+
+	return template.format(
 		code=code,
 		summary=summary,
 		instruction=full_instructions,

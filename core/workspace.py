@@ -392,11 +392,13 @@ class Workspace:
 
         return sorted_infos[:k]
 
-    def get_buggy_versions(self, is_leaf=True, max_bug_depth=3) -> list[VersionInfo]:
+    def get_buggy_versions(self, is_leaf=True, max_bug_depth: Optional[int] = None) -> list[VersionInfo]:
         """Return all versions where is_buggy=True and <= max_bug_depth."""
         return [
             info for _, info in self.version_infos.items()
-            if (not is_leaf or info.children is None) and info.bug_depth <= max_bug_depth
+            if info.bug_depth > 0
+            and (not is_leaf or info.children is None)
+            and (max_bug_depth is None or info.bug_depth <= max_bug_depth)
         ]
 
     def get_good_versions(self) -> list[VersionInfo]:

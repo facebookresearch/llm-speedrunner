@@ -29,7 +29,10 @@ class BoNScienceRunner(ScienceRunner):
 		eval_slurm_config: Optional[SlurmConfig] = None,
 		max_retries=3,
 		max_log_len=30_000,
-		n_hypotheses: int = 1,
+		n_hypotheses=1,
+		n_initial_hypotheses=1,
+		debug_prob=0.0,
+		max_bug_depth: Optional[int] = 3
 	):
 		super().__init__(
 			config=config,
@@ -44,6 +47,9 @@ class BoNScienceRunner(ScienceRunner):
 		)
 
 		self.n_hypotheses = n_hypotheses
+		self.n_initial_hypotheses = n_initial_hypotheses
+		self.debug_prob = debug_prob
+		self.max_bug_depth = max_bug_depth
 
 	def _job_callback(self, version: str, job_results: slurm_utils.JobResult):
 		self.set_results_for_version(version, job_results)
@@ -146,8 +152,10 @@ class BoNScienceRunner(ScienceRunner):
 		for i in range(n_iterations):
 			# Request next hypotheses
 			relevant_history = None
+			is_debugging = False
 			if open_version is not None:
 				open_version_info = self.workspace.get_version_info(open_version)
+				is_debugging = open_version_info.bug_depth > 0
 				history_from_version = open_version_info.stable_ancestor_version
 				relevant_history = self.workspace.view_history(
 					from_version=history_from_version,
@@ -161,15 +169,28 @@ class BoNScienceRunner(ScienceRunner):
 					as_string=True
 				)
 
-			hypotheses, _ = self.ideator.ideate(
-				instruction=self.idea_instructions,
-				fnames=self.fnames,
-				workspace=self.workspace,
-				version='1' if not open_version else open_version,
-				n_ideas=self.n_hypotheses,
-				history=relevant_history,
-				max_retries=1
-			)
+			# By default, we branch n_hypotheses experiments per iteration, but
+			# keep the branch factor to be 1 when debugging a previous version.
+			# First iteration's branch factor can be set separately to mimic AIDE.
+			n_hypotheses = self.n_hypotheses
+			if is_debugging:
+				n_hypotheses = 1
+			elif i == 0:
+				n_hypotheses = self.n_initial_hypotheses
+
+			hypotheses = []
+			for _ in range(n_hypotheses):  
+				# @todo: Should parallelize on main, but low priority for now
+				# to avoid getting rate-limited on Azure
+				hypothesis, _ = self.ideator.ideate(
+					instruction=self.idea_instructions,
+					fnames=self.fnames,
+					workspace=self.workspace,
+					version='1' if not open_version else open_version,
+					history=relevant_history,
+					max_retries=1
+				)
+				hypotheses.append(hypothesis)
 
 			current_versions = ['0']
 			if open_version is not None and open_version not in current_versions:
@@ -219,10 +240,16 @@ class BoNScienceRunner(ScienceRunner):
 
 				await slurm_utils.JobObserver.shared.wait()
 
-			# Set open set to the top-1 version
-			open_version = self.workspace.get_top_k_versions(
-				selection_metric=self.selection_metric,
-				from_versions=current_versions,
-				lower_is_better=self.lower_is_better,
-				k=1
-			)[0].version
+			# If debug, then select a buggy leaf snapshot to debug
+			buggy_versions = self.workspace.get_buggy_versions(
+				is_leaf=True, max_bug_depth=self.max_bug_depth
+			)
+			if len(buggy_versions) and np.random.rand() < self.debug_prob:
+				open_version = np.random.choice(buggy_versions).version
+			else: # Otherwise set open set to the top-1 version
+				open_version = self.workspace.get_top_k_versions(
+					selection_metric=self.selection_metric,
+					from_versions=current_versions,
+					lower_is_better=self.lower_is_better,
+					k=1
+				)[0].version

@@ -9,9 +9,11 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [x] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
 	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
 - [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
-- [x] Add support diff-based editors (e.g. via Aider-based Implementers)
+- [x] Add support for diff-based editors (e.g. via Aider-based Implementers)
 - [x] Support third-party LLM APIs in Azure in `core.llm_client` and `core.coder.aider` (o1-preview support added.
-- [ ] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
+- [x] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
+- [ ] Gracefully handle preemption and re-entry.
+- [ ] Add ability to condition on prior knowledge when formulating hypotheses.
 - [ ] Add a basic web interface to explore a running or previous scientist run.
 
 ## Run examples

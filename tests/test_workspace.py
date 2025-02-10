@@ -371,3 +371,26 @@ class TestWorkspaceViewHistory:
         )
         assert len(history) == 6
         assert [info.version for info in history] == ['7', '6', '5', '2', '1', '0']
+
+    def test_get_buggy_versions_all(self):
+        infos = self.workspace.get_buggy_versions(is_leaf=False, max_bug_depth=None)
+        assert len(infos) == 3
+        assert set([info.version for info in infos]) == {'4', '5', '6'}
+
+    def test_get_buggy_versions_is_leaf(self):
+        infos = self.workspace.get_buggy_versions(is_leaf=True, max_bug_depth=None)
+        assert len(infos) == 0
+
+    def test_get_buggy_versions_all_max_bug_depth(self):
+        infos = self.workspace.get_buggy_versions(is_leaf=False, max_bug_depth=2)
+        assert len(infos) == 2
+        assert set([info.version for info in infos]) == {'4', '5'}
+
+    def test_get_buggy_versions_is_leaf_max_bug_depth(self):
+        infos = self.workspace.get_buggy_versions(is_leaf=True, max_bug_depth=2)
+        assert len(infos) == 0
+
+    def test_get_good_versions(self):
+        infos = self.workspace.get_good_versions()
+        assert len(infos) == 5
+        assert set([info.version for info in infos]) == {'1', '2', '3', '7', '0'}
