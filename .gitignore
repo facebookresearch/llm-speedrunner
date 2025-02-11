@@ -23,9 +23,18 @@ config/secrets/
 
 # Workspaces
 workspaces/
+cache/
 
 # Figures
 figures/
 
 # Aider
 aider.txt
+
+# MLE-Bench tasks
+config/task/mlebench/**
+!config/task/mlebench/default.yaml
+!config/task/mlebench/_group_.yaml
+workspace_templates/mlebench/**
+!workspace_templates/mlebench/base/
+!workspace_templates/mlebench/base/*

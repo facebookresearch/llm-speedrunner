@@ -15,7 +15,7 @@ from core.prompts import ideator_prompts
 class Ideator(Agent):
 	def ideate(
 		self, 
-		instruction: str,
+		task_description: str,
 		fnames: list[str],
 		workspace: Workspace,
 		version: int,
@@ -32,7 +32,7 @@ class Ideator(Agent):
 		ideation_prompt = ideator_prompts.basic_ideation_prompt(
 			code=code,
 			summary=summary,
-			instruction=instruction,
+			task_description=task_description,
 			is_debug=version_info.bug_depth > 0,
 			ignore_ideas=ignore_ideas,
 			history=history,

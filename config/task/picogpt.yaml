@@ -14,9 +14,9 @@ exp_config_args:
     so that running exactly `python main.py` results in the highest possible
     test accuracy after 10 epochs.
 
-  idea_instructions: >-
-    The implementation of main.py should achieve the lowest test_loss possible
-    after 10 epochs of training.
+  task_description: >-
+    Implement main.py so that running it as `python main.py` produces the
+    lowest test_loss possible after 10 epochs of training.
 
   code_instructions: >-
     Make sure your code changes preserve these aspects of main.py:

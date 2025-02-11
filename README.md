@@ -7,12 +7,13 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 ## 📋 Todos
 - [x] Create a single high-level `launch_scientist.py` integrated with `hydra` for config. 
 - [x] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
-	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
+	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Coder`.
 - [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
-- [x] Add support for diff-based editors (e.g. via Aider-based Implementers)
+- [x] Add support for diff-based editors (e.g. via Aider-based Coders)
 - [x] Support third-party LLM APIs in Azure in `core.llm_client` and `core.coder.aider` (o1-preview support added.
 - [x] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
 - [x] Add ability to condition on prior knowledge when formulating hypotheses.
+- [x] Integrate MLE-Bench tasks via a script to automatically import individual tasks via their competition IDs.
 - [ ] Gracefully handle preemption and re-entry.
 - [ ] Add a basic web interface to explore a running or previous scientist run.
 
@@ -56,7 +57,26 @@ python launch_scientist.py \
 
 See the available models and tasks under `config/model` and `config/task` respectively. You can pass the name of any of these yaml files (without the extension) as the value for `launch_scientist.py`'s' model and task command-line arguments.
 
+### Adding a new task
 
+Adding a new task requires only a few steps:
+
+1. Create a new _workspace template_ as its own folder under `workspace_templates/`. This is the set of starting files available to the scientist. Whatever is in the task's workspace template is copied into the `v_1` workspace when running the scientist.
+
+2. Create a new task config under `config/task/`. Remember to set the header `# @package _global_`. See the existing configs for examples. In particular `collatz.yaml` provides an example for experiments requiring only CPUs, `picogpt.yaml`, requiring GPUs, and `nanogpt.yaml` requiring GPUs and the use of `torchrun`.
+
+3. Change the value of task in `config/default.yaml` to the name of your task's yaml file created above (or create your own top-level config with `task` configured appropriately).
+
+#### Automatically import an MLE-Bench task
+
+You can use the script `make_mlebench_task.py` to automatically generate a scientist task config based on an MLE-Bench task's competition ID. The below command will generate the necessary files in `task/config/mlebench` and `workspace_templates/mlebench` for MLE-Bench task `random_acts_of_pizza`:
+```bash
+python make_mlebench_task.py \
+--task_id=random-acts-of-pizza \
+--cache_dir_path=/path/for/storing/kaggle/datasets
+```
+
+You can then run the scientist with this task as follows by specifying the task in the launch command as follows: `python launch_scientist.py task=mlebench/random_acts_of_pizza`. Note that we convert the task ID (also referred to as "competition ID") from kebab to snake case. 
 
 ## Design
 The automated "science loop" consists of a few common stages:
@@ -83,10 +103,10 @@ The science loop can be implemented via either of two existing runners (or with 
 - `ScienceRunner` is unstructured in its run logic, allowing for maximum flexibility.
 - `BoNScienceRunner` inherits from `ScienceRunner`, and follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch `n_hypotheses` hypotheses are generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
 
-In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Implementer` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.implementers` serve as central registries for Ideator and Implementer subclasses, making it easy to define combinations of ideator and implementer strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries. 
+In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Coder` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.coders` serve as central registries for Ideator and Coder subclasses, making it easy to define combinations of ideator and coder strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries. 
 
 #### Why explict modules?
-Having explicit implementations for `Ideator` and `Implementer` variants is useful, as these strategies will be valuable to run in isolation, either for the purposes of evaluation (per-stage evals) or for handling independent endpoints in downstream integrations (e.g. giving Metamate an "ideation" or "experiment implementation" skill).
+Having explicit implementations for `Ideator` and `Coder` variants is useful, as these strategies will be valuable to run in isolation, either for the purposes of evaluation (per-stage evals) or for handling independent endpoints in downstream integrations (e.g. giving Metamate an "ideation" or "experiment implementation" skill).
 
 
 ### Agents
@@ -120,16 +140,6 @@ Importantly, if you want to block thread execution until all observed jobs are f
 
 Under the hood, JobObserver manages a set of `asyncio` tasks that regularly polls for the status of each observed job. This means the main function for each scientist script must be run as `asyncio.run(main())`, so that the asyncio run loop is properly initialized (see `climb_nanogpt.py` or `climb_collatz.py` for examples).
 
-
-### Adding a new task
-
-Adding a new task requires only a few steps:
-
-1. Create a new _workspace template_ as its own folder under `workspace_templates/`. This is the set of starting files available to the scientist. Whatever is in the task's workspace template is copied into the `v_1` workspace when running the scientist.
-
-2. Create a new task config under `config/task/`. Remember to set the header `# @package _global_`. See the existing configs for examples. In particular `collatz.yaml` provides an example for experiments requiring only CPUs, `picogpt.yaml`, requiring GPUs, and `nanogpt.yaml` requiring GPUs and the use of `torchrun`.
-
-3. Change the value of task in `config/default.yaml` to the name of your task's yaml file created above (or create your own top-level config with `task` configured appropriately).
 
 
 

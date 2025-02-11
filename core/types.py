@@ -8,7 +8,6 @@ Serializable = Union[str, int, float, bool, None, dict[str, "Serializable"], lis
 @dataclasses.dataclass
 class ExperimentConfig:
 	preamble: str
-	idea_instructions: str
 	code_instructions: str
 
 	entry_fname: str
@@ -22,6 +21,9 @@ class ExperimentConfig:
 	max_retries: int = 3
 
 	eval_fname: Optional[str] = None
+
+	task_description: Optional[str] = None
+	task_description_file: Optional[str] = None
 
 
 @dataclasses.dataclass

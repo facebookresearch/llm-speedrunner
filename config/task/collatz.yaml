@@ -18,7 +18,7 @@ exp_config_args:
     the time is up. You will be judged based on any
     results printed to stdout within this time.
 
-  idea_instructions: >-
+  task_description: >-
     Find the longest Collatz sequence within a runtime budget of 1 minute.
 
   code_instructions: >-

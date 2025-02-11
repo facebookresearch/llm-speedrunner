@@ -267,6 +267,8 @@ def submit_job(
                 subprocess.run(full_command, shell=True, check=True)
     else:
         def job_function():
+            import os
+
             if env_vars:
                 for k,v in env_vars.items():
                     os.environ[k] = str(v)

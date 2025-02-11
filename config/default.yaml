@@ -44,6 +44,7 @@ workspace_args:
     - coder_history.jsonl
     - aider.txt
     - meta.json
+    - cache
 
 assistant_args:
   _target_: core.agent.Agent
