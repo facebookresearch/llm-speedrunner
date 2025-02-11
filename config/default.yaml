@@ -19,7 +19,7 @@ model_url: "http://${node_id}.fair-aws-h100-2.hpcaas:8000/v1"
 
 log_llm_metrics: True
 
-n_iterations: 10
+n_iterations: 5
 
 system_prompt: >-
   You are a machine learning scientist, with expertise in 

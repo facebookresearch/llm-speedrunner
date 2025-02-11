@@ -71,7 +71,7 @@ class BoNScienceRunner(ScienceRunner):
 		if self.slurm_config.use_torchrun:
 			command = self.entry_fname
 		else:
-			command = f'python {self.entry_name}'
+			command = f'python {self.entry_fname}'
 
 		job = slurm_utils.submit_job(
 			command=command, 
