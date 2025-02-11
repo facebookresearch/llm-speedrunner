@@ -17,8 +17,9 @@ venv/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Hydra outputs
+# Hydra
 outputs/
+config/secrets/
 
 # Workspaces
 workspaces/

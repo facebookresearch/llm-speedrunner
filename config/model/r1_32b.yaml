@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"
+model_url: "http://${node_id}.fair-aws-h100-2.hpcaas:8000/v1"

@@ -9,23 +9,53 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [x] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
 	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Implementer`.
 - [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
-- [x] Add support diff-based editors (e.g. via Aider-based Implementers)
-- [ ] Support MetaGen and third-party LLM APIs in `core.llm_client`.
+- [x] Add support for diff-based editors (e.g. via Aider-based Implementers)
+- [x] Support third-party LLM APIs in Azure in `core.llm_client` and `core.coder.aider` (o1-preview support added.
+- [x] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
+- [x] Add ability to condition on prior knowledge when formulating hypotheses.
+- [ ] Gracefully handle preemption and re-entry.
+- [ ] Add a basic web interface to explore a running or previous scientist run.
 
 ## Run examples
 
-First, spin up an instance of r1 (32B):
+#### r1
+First, spin up an instance of `r1-32b`:
 
-```
+```bash
 python serve_vllm.py
 ```
 
 Find the node id for this vllm job on Slurm and run one of the scientist scripts:
 ```
-python launch_scientist.py <vllm node id>
+python launch_scientist.py node_id=<vllm node id> model=r1_32b task=collatz
 ```
 
-By default `launch_scientist.py` will run the scientist on the task defined in `config/task/collatz.yaml`. You can change the default task by updating the `task` field under the default settings in `default.yaml` to the name of another config file in `config/task/`. For instructions on adding a new task, see the "Adding a new task" section below.
+#### o1-preview
+To use `o1-preview`, you do not need to spin up a separate server, as requests go to Meta's Azure instance:
+```bash
+python launch_scientist.py model=o1_preview task=collatz
+```
+
+#### AIDE
+To run with AIDE-style search, explicitly set the science_runner type to `aide`:
+```bash
+python launch_scientist.py \
+	model=o1_preview \
+	science_runner=aide \
+	task=collatz
+```
+
+#### Knowledge sources
+To pass in external knowledge sources that then inform the idea generation stage, pass in a list of file paths or glob strings to the source files (note the quotations around the argument and value here):
+```bash
+python launch_scientist.py \
+	model=o1_preview \
+	task=collatz \
+	'knowledge_src_paths=["data/knowledge_nanogpt/*.md"]'
+```
+
+See the available models and tasks under `config/model` and `config/task` respectively. You can pass the name of any of these yaml files (without the extension) as the value for `launch_scientist.py`'s' model and task command-line arguments.
+
 
 
 ## Design
@@ -49,13 +79,9 @@ This codebase is designed with the following goals in mind:
 
 
 ### The core science loop
-To maximize flexibility and speed early on, the scientist experimentation loop for each task, e.g. speedrunning nanoGPT, is implemented in its own script, e.g. `climb_nanogpt.py`.
-
-The core science loop in each script is implemented via a subclass of ScienceRunner (e.g. `NanoGPTClimber`) implements a `run(n_iterations: int)` method, which executes the scientist loop several times.
-
-While the core run logic can currently be free-form, we plan to fork ScienceRunner into two variations: 
-- `ScienceRunner` will remain unstructured in its run logic
-- `BoNScienceRunner`, which inherits from `ScienceRunner`, follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch of N hypotheses can be generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
+The science loop can be implemented via either of two existing runners (or with any custom logic via your own subclass of `ScienceRunner`): 
+- `ScienceRunner` is unstructured in its run logic, allowing for maximum flexibility.
+- `BoNScienceRunner` inherits from `ScienceRunner`, and follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch `n_hypotheses` hypotheses are generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
 
 In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Implementer` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.implementers` serve as central registries for Ideator and Implementer subclasses, making it easy to define combinations of ideator and implementer strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries. 
 

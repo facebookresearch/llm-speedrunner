@@ -1,32 +1,64 @@
-from typing import Optional
+from typing import Optional, Union
 import asyncio
 import json
 import re
 import sys
 
-from openai import OpenAI
+from openai import OpenAI, AzureOpenAI
 
 
 def strip_think_tokens(text: str):
     return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
 
 
+def get_model_client(
+    model_url: str, 
+    api_key: str,
+    api_version='2024-10-21', 
+    timeout=30*60
+) -> Union[OpenAI, AzureOpenAI]:
+    if 'https://azure' in model_url:
+        client = AzureOpenAI(
+          api_key=api_key,  
+          azure_endpoint=model_url,
+          api_version=api_version
+        )
+    else:
+        client = OpenAI(
+            base_url=model_url,
+            api_key=api_key,
+            timeout=30*60, # 30 min timeout since we are <thinking/>
+        )
+
+    return client
+
+
 class LLMClient:
-    def __init__(self, model_url: str, log_metrics=False):
+    def __init__(
+        self,
+        model_url: str,
+        model_name: str,
+        log_metrics=False,
+        api_key: str = 'token-abc123'
+    ):
         """LLM client to interface with VLLM and other LLM servers based on the OpenAI API.
 
         Args:
             model_url (str): url to model server
         """
         self.model_url = model_url
-        self._client = OpenAI(
-            base_url=model_url,
-            api_key="token-abc123",
-            timeout=30*60, # 30 min timeout since we are <thinking/>
-        )
+        self.model_name = model_name
+        self._client = get_model_client(model_url=model_url, api_key=api_key)
 
         self._log = []
         self._log_metrics = log_metrics
+
+    @property
+    def is_system_prompt_enabled(self):
+        if self.model_name == 'o1-preview':
+            return False
+        else:
+            return True
 
     def flush_logs(self, path: str):
         if self._log_metrics:
@@ -51,14 +83,15 @@ class LLMClient:
             show_thinking (bool): If true, preserves any leading <thinking>...</thinking> tokens.
 
         """
-        if system_prompt:
+        print('PROMPT:\n', prompt)
+        if system_prompt and self.is_system_prompt_enabled:
             messages = [{"role": "system", "content": system_prompt}]
         else:
             messages = []
         messages.append({"role": "user", "content": prompt})
         
         completion = self._client.chat.completions.create(
-          model="deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+          model=self.model_name,
           messages=messages
         )
 

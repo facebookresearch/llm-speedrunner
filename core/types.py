@@ -6,17 +6,6 @@ Serializable = Union[str, int, float, bool, None, dict[str, "Serializable"], lis
 
 
 @dataclasses.dataclass
-class ExperimentRecord:
-	diffs: list[str]
-	metrics: dict[str, Serializable]
-
-
-@dataclasses.dataclass
-class ExperimentHistory:
-	records: list[ExperimentRecord]
-
-
-@dataclasses.dataclass
 class ExperimentConfig:
 	preamble: str
 	idea_instructions: str
@@ -45,5 +34,6 @@ class SlurmConfig:
 	use_torchrun: bool = False
 	job_name: str = 'submitit'
 	account: str = 'maui'
+	qos: Optional[str] = None
 	env_vars: Optional[dict[str, str]] = None
 	log_dir='submitit_logs'

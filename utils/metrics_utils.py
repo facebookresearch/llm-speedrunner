@@ -51,6 +51,7 @@ def extract_best_line_metrics(
     best_metrics = None
     best_sel_value = None
     for line in text.splitlines():
+        is_valid = True
         metrics = extract_single_line_metrics(line, metric_types)
         if not metrics:
             continue
@@ -58,24 +59,29 @@ def extract_best_line_metrics(
         # Reject if any metrics go below a floor threshold
         if metrics_at_least and any(metrics.get(key, float('inf')) < threshold 
                for key, threshold in metrics_at_least.items()):
-            continue
+            is_valid = False
 
         # Reject if any metrics exceed a ceiling threshold
-        if metrics_at_most and any(metrics.get(key, float('-inf')) > threshold 
+        elif metrics_at_most and any(metrics.get(key, float('-inf')) > threshold 
                for key, threshold in metrics_at_most.items()):
-            continue
+            is_valid = False
 
         # Get the value of the selection metric; if absent, skip.
         sel_val = metrics.get(selection_metric)
         if sel_val is None:
             continue
 
-        if best_metrics is None or (
-            lower_is_better and sel_val < best_sel_val
-        ) or (
-            not lower_is_better and sel_val > best_sel_val
-        ):
+        metrics['is_valid'] = is_valid
+        if best_metrics is None:
             best_metrics, best_sel_val = metrics, sel_val
+        else:
+            # Only replace if better than current best + is valid under constraints
+            if is_valid and ((
+                lower_is_better and sel_val < best_sel_val
+            ) or (
+                not lower_is_better and sel_val > best_sel_val
+            )):
+                best_metrics, best_sel_val = metrics, sel_val
 
     if best_metrics is None:
         best_metrics = {}

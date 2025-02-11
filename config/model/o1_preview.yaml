@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: o1-preview
+model_url: "https://azure-services-fair-openai1-southcentralusn2.azure-api.net"

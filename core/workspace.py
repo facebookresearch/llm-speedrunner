@@ -11,11 +11,49 @@ import time
 
 import numpy as np
 
-from core.types import ExperimentRecord, ExperimentHistory, ExperimentConfig
+from core.types import ExperimentConfig
 from utils import fs_utils
 
 
 VERSION_REGEX = re.compile(r'^v_(\d+)$')
+
+
+VERSION_SUMMARY_TEMPLATE = """Version: {version}
+Parent version: {parent_version}
+Hypothesis: {hypothesis}
+Results: 
+{metrics}
+Has bugs? {has_bugs}
+Outcome summary:
+{outcome_summary}
+"""
+
+
+@dataclasses.dataclass
+class VersionInfo:
+    version: str  # e.g '1', '2', etc
+    results: dict
+    bug_depth: int = 0  # 0 if not buggy, 1 if buggy and parent is good, 2 if parent is also buggy, etc
+    parent_version: Optional[str] = None
+    children: Optional[list[str]] = None
+    stable_ancestor_version: Optional[str] = None
+
+    def get_summary_string(self):
+        metrics = '\n'.join(
+            [f'\t{k}: {v}' for k,v in self.results.get('metrics', {}).items()]
+        )
+        outcome_summary = self.results.get('outcome_summary', '')
+
+        summary = VERSION_SUMMARY_TEMPLATE.format(
+            version=self.version, 
+            parent_version=self.parent_version,
+            hypothesis=self.results.get('hypothesis', ''),
+            metrics=metrics,
+            outcome_summary=outcome_summary,
+            has_bugs='Yes' if self.bug_depth > 0 else 'No'
+        )
+
+        return summary
 
 
 class Workspace:
@@ -23,30 +61,32 @@ class Workspace:
 
     Workspace contains:
         - Directory reference to project files
-        - Chain of experiment diffs from base project
         - Evaluation metrics per experiment
     """
-    def __init__(self, root_path: str, template_dir: Optional[str] = None, track_history=True):
+    def __init__(
+        self,
+        root_path: str,
+        template_dir: Optional[str] = None,
+        packages: Optional[list[str]] = None,
+        ignore_list: Optional[list[str]] = None,
+    ):
         self.root_path: str = fs_utils.expand_path(root_path)
         os.makedirs(self.root_path, exist_ok=True)
 
-        if track_history:
-            self._exp_history: ExperimentHistory = ExperimentHistory(records=[])
-        else:
-            self._exp_history = None
-
         # Initialize version dirs
         self.template_dir = template_dir
+        self.packages = packages if packages else []
+        self.ignore_list = ignore_list
 
         version_dirs = self._get_version_dirs()
         self.n_versions = len(version_dirs)
-        self.create_version(from_path=template_dir)
 
-        # Copy files from cp_dir
-        if template_dir is not None:
-            fs_utils.cp_dir(template_dir, 
-                self.resolve_path(version=str(self.n_versions))
-            )
+        # Load version infos into memory
+        self.version_infos = {info.version: info for info in self.load_version_info()}
+
+        if self.n_versions == 0:
+            self.create_version(from_path=template_dir)
+            self.create_version(from_version='0')
 
     def _get_version_dirs(self) -> list[str]:
         version_dirs = []
@@ -55,11 +95,11 @@ class Workspace:
             abs_dir_path = self.resolve_path(dirname)
             match = VERSION_REGEX.match(dirname)  # Match pattern and extract integer
             if os.path.isdir(abs_dir_path) and match:
-                version_dirs.append((int(match.group(1)), abs_dir_path))  # Store (integer, path)
+                version_dirs.append((match.group(1), abs_dir_path))  # Store (integer, path)
 
         version_dirs.sort(key=lambda x: x[0])
 
-        return [path for _, path in version_dirs]
+        return {version: path for version, path in version_dirs}
 
     def _get_version_dirname(self, version: str) -> str:
         return f'v_{version}'
@@ -74,6 +114,56 @@ class Workspace:
                 (os.path.join(self._get_version_dirname(version), path))
             )
 
+    def load_version_info(self, version: Optional[str] = None) -> VersionInfo | list[VersionInfo]:
+        """Return info for version, or all version infos if no version specified."""
+
+        if version is None:
+            versions = list(self._get_version_dirs().keys())
+        else:
+            versions = [version]
+
+        infos = []
+        for version in versions:
+            try:
+                results = json.loads(
+                    self.view(
+                        'results.json', 
+                        version=version, 
+                        no_filename_headers=True
+                    ).strip()
+                )
+            except:
+                results = {}
+
+            try:
+                meta = json.loads(
+                        self.view('meta.json',
+                        version=version,
+                        no_filename_headers=True
+                    ).strip()
+                )
+            except:
+                meta = {}
+
+            parent_version = meta.get('parent', None)
+            infos.append(VersionInfo(
+                    version=version,
+                    results=results,
+                    bug_depth=meta.get('bug_depth', 0),
+                    parent_version=parent_version,
+                    children=meta.get('children', None),
+                    stable_ancestor_version=meta.get('stable_ancestor_version', parent_version)
+                )
+            )
+
+        if isinstance(version, str) and len(infos) == 1:
+            return infos[0]
+        else:
+            return infos
+
+    def get_version_info(self, version: str) -> Optional[VersionInfo]:
+        return self.version_infos.get(version)
+
     def save_to_file(self, text: str, path: str, version:Optional[str] = None):
         """Save text content to a file path in root_path."""
         save_path = self.resolve_path(path, version=version)
@@ -82,17 +172,22 @@ class Workspace:
         with open(save_path, 'w') as fout:
             fout.write(text)
 
+        if version is not None:  # Refresh version info if necessary
+            self.version_infos[version] = self.load_version_info(version=version)
+
     def create_version(
         self, 
         from_path: Optional[str] = None, 
         from_version: Optional[str] = None
     ) -> int:
         """Create new version directory, copying all contents in from_path."""
-        self.n_versions += 1
         new_version = str(self.n_versions)
         new_version_dir_path = self.resolve_path(version=new_version)
+        self.n_versions += 1
 
         os.makedirs(new_version_dir_path, exist_ok=True)
+
+        src_path = None
         if from_path is not None:
             src_path = fs_utils.expand_path(from_path)
         elif from_version is not None:
@@ -101,14 +196,60 @@ class Workspace:
             src_path = fs_utils.expand_path(self.template_dir)
 
         if src_path is not None:
-            fs_utils.cp_dir(src_path, new_version_dir_path)
+            fs_utils.cp_dir(src_path, new_version_dir_path, ignore_list=self.ignore_list)
 
         if from_version is not None:
             # Add a meta.json file with parent info to new version
-            metadata = dict(parent=from_version, created_at=int(time.time()))
+            metadata = dict(parent=from_version, children=None, created_at=int(time.time()))
             self.save_to_file(json.dumps(metadata), path='meta.json', version=new_version)
 
-        return self.n_versions
+            # Update parent's metadata with child pointer
+            try:
+                parent_metadata = json.loads(
+                        self.view('meta.json',
+                        version=from_version,
+                        no_filename_headers=True
+                    ).strip()
+                )
+            except:
+                parent_metadata = {}
+
+            children = parent_metadata.get('children')
+            if children is None:
+                children = [new_version]
+            else:
+                children.append(new_version)
+            parent_metadata['children'] = children
+
+            self.save_to_file(json.dumps(parent_metadata), path='meta.json', version=from_version)
+            self.version_infos[from_version] = self.load_version_info(version=from_version)
+
+        self.version_infos[new_version] = self.load_version_info(version=new_version)
+
+        return new_version
+
+    def mark_as_buggy_from_version(self, version: str, from_version: Optional[str] = None):
+        if from_version:
+            meta = json.loads(
+                self.view(
+                    'meta.json',
+                    version=version,
+                    no_filename_headers=True
+                ).strip()
+            )
+            parent_meta = json.loads(
+                self.view(
+                    'meta.json', 
+                    version=from_version, 
+                    no_filename_headers=True
+                ).strip()
+            )
+        else:
+            meta = {}
+            parent_meta = {}
+        meta['bug_depth'] = parent_meta.get('bug_depth', 0) + 1
+        meta['stable_ancestor_version'] = parent_meta.get('stable_ancestor_version', from_version)
+        self.save_to_file(json.dumps(meta), 'meta.json', version=version)
 
     def ls(self, path = ''):
         """List all files and directories at a path"""
@@ -195,7 +336,7 @@ class Workspace:
         from_versions: Optional[list[str]] = None,
         lower_is_better=False,
         k=1
-    ) -> list[str]:
+    ) -> list[VersionInfo]:
         """Get the top-k versions based on a selection_fn
         
         Args:
@@ -206,91 +347,153 @@ class Workspace:
         Returns:
             A list of the top-k versions based on the selection func.
         """
-        all_version_dirnames = [
-            self.resolve_path(dirname) for dirname in os.listdir(self.resolve_path())
-            if VERSION_REGEX.match(dirname)
-        ]
-
-        if from_versions is not None:
-            if len(from_versions) == 0:
-                raise ValueError('from_versions cannot be an empty list.')
-            else:
-                version2path = {}
-                filtered_version_dirnames = []
-                for dirname in all_version_dirnames:
-                    # select only dirnames that match these versions
-                    match = VERSION_REGEX.match(os.path.basename(dirname))  # Match pattern and extract integer
-                    if match:
-                        version = match.group(1)
-                        version2path[version] = self.resolve_path(dirname)
-
-                for version in from_versions:
-                    if version in version2path:
-                        filtered_version_dirnames.append(version2path[version])
-
-                all_version_dirnames = filtered_version_dirnames
+        if from_versions is None:
+            version_infos = list(self.version_infos.values())
+        else:
+            from_versions_set = set(from_versions)
+            version_infos = [
+                info for version, info in self.version_infos.items() 
+                if version in from_versions_set
+            ]
 
         flip_coef = -1 if lower_is_better else 1
         default_value = -np.inf
 
-        versions = []
+        valid_infos = []
         scores = []
-        for dirname in all_version_dirnames:
-            match = VERSION_REGEX.match(os.path.basename(dirname))
+        for info in version_infos:
+            metrics = info.results.get('metrics', {})
+            score = metrics.get(selection_metric, None)
 
-            if match:
-                version = match.group(1)
-                res_path = self.resolve_path('results.json', version=version)
-                if os.path.exists(res_path):
-                    with open(res_path, 'r') as f:
-                        results = json.load(f)
+            if not metrics.get('is_valid', True):
+                continue
 
-                    metrics = results.get('metrics', {})
-                    score = metrics.get(selection_metric, None)
-                    if score is None:
-                        score = default_value
-                    score *= flip_coef
+            if score is None:
+                score = default_value
+            elif not isinstance(score, float):
+                try:
+                    score = float(score)
+                except (ValueError, TypeError):
+                    continue
 
-                    if not isinstance(score, float):
-                        try:
-                            score = float(score)
-                        except (ValueError, TypeError):
-                            pass
-                    scores.append(score)
-                    versions.append(version)
+            if score != default_value:
+                score *= flip_coef
+
+            scores.append(score)
+            valid_infos.append(info)
         
-        # Sort versions based on scores in desc order, with higher versions taking precendence if scores are equal
-        sorted_versions = [v for v, _n in sorted(zip(versions, scores), key=lambda x: (x[1], int(x[0])), reverse=True)]
+        # Sort versions based on scores in desc order, with higher versions taking precedence if scores are equal
+        sorted_infos = [
+            info for info, _ in sorted(
+                zip(valid_infos, scores), 
+                key=lambda x: (x[1], int(x[0].version)), reverse=True
+            )
+        ]
 
-        return sorted_versions[:k]
+        return sorted_infos[:k]
+
+    def get_buggy_versions(self, is_leaf=True, max_bug_depth: Optional[int] = None) -> list[VersionInfo]:
+        """Return all versions where is_buggy=True and <= max_bug_depth."""
+        return [
+            info for _, info in self.version_infos.items()
+            if info.bug_depth > 0
+            and (not is_leaf or info.children is None)
+            and (max_bug_depth is None or info.bug_depth <= max_bug_depth)
+        ]
+
+    def get_good_versions(self) -> list[VersionInfo]:
+        """Return all versions that are not buggy."""
+        return [info for _, info in self.version_infos.items() if info.bug_depth == 0]
 
     def view_history(
-        self, 
+        self,
+        from_version: Optional[str] = None, 
         max_len: Optional[int] = None, 
-        as_diffs=True, 
-        valid_only=True
-    ) -> str:
-        """Return most recent experiment records summarized as a single string.
+        incl_good_versions=True,
+        incl_buggy_versions=False,
+        incl_ancestors=True,
+        incl_descendents=False,
+        ancestor_depth: Optional[int] = None,
+        descendent_depth: Optional[int] = None,
+        as_string=True
+    ) -> str | list[str]:
+        """Return recent VersionInfo instances summarized as a single string.
+
+        Results are returned with most recent versions first.
 
         Args:
-            max_len: Only return this many of most recent records.
-            as_diffs: If True, return as a chain of diffs from first returned record.
+            from_version: If None, returns all version infos subject to filter conditions.
+                Note in this case, ancestor and descendent-related conditions are ignored.
+            max_len: Maximum number of recent versions to consider.
+            incl_good_versions: Whether to include good versions.
+            incl_buggy_versions: Whether to include buggy versions.
+
+            incl_ancestors: Whether to return nodes from which from_version descends.
+            incl_descendents: Whether to return nodes descending from from_version.
+            ancestor_depth: If not None, only return ancestors up to this many degrees away.
+            descendent_depth: If not None, only return descendents up to this many degrees away.
+            as_string: Whether to return the history as a string.
 
         Returns:
-            A string summary of the max_len most recent experiment records.
+            A string summary or list of most recent, filtered version infos.
         """
-        # if track_history:
-        #   return self._exp_history[-max_len:]
-        # else:
-        #   return None
-        pass
+        if from_version is None:
+            infos = list(self.version_infos.values())
+        else:
+            if not from_version in self.version_infos:
+                raise ValueError(f'Version {from_version} is missing.')
 
-    def save_to_history(self, record: ExperimentRecord):
-        """Save a new experiment record to experiment history."""
-        if not track_history:
-            return
+            from_version_info = self.version_infos[from_version]
 
-        self._exp_history.append(record)
+            # Get ancestors if necessary
+            infos = []
+            parent_version = from_version_info.parent_version
+            depth = 0
+            while parent_version is not None and incl_ancestors and (
+                not ancestor_depth or depth < ancestor_depth
+            ):
+                parent = self.version_infos.get(parent_version)
+                infos.append(parent)
+                depth += 1
+                parent_version = parent.parent_version
 
+            # Get descendents via BFS
+            descend_versions = from_version_info.children
+            while descend_versions and incl_descendents and (
+                not descendent_depth or depth < descendent_depth
+            ):
+                descend_infos = [self.version_infos.get(v) for v in descend_versions]
+                infos += descend_infos
 
+                descend_versions = []
+                for info in descend_infos:
+                    if info.children:
+                        descend_versions += info.children
 
+                depth += 1
+
+        # Filter away good/buggy versions
+        infos = [
+            x for x in infos
+            if (incl_good_versions and not x.bug_depth > 0) 
+            or (incl_buggy_versions and x.bug_depth > 0)
+        ]
+
+        sorted_infos = sorted(infos, key=lambda x: x.version, reverse=True)
+
+        if max_len:
+            sorted_infos = sorted_infos[:max_len]
+
+        if as_string:
+            summary = '\n'.join(
+                [f'<info>{x.get_summary_string()}</info>' for x in sorted_infos]
+            )
+
+            if len(sorted_infos) > 0:
+                header = '<version_log>'
+                footer = '</version_log>'
+                summary = f'{header}\n{summary}\n{footer}'
+
+            return summary
+        else:
+            return sorted_infos

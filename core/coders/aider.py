@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 from pathlib import Path
 import logging
 import os
@@ -9,19 +9,46 @@ from aider.models import Model
 from aider.llm import litellm
 
 from core.agent import Agent
+from core.prompts import coder_prompts
 from core.workspace import Workspace
+
+
+NAME_TO_AIDER_MODEL_NAME = {
+    'o1-preview': 'azure/o1-preview'
+}
+
+
+def get_aider_model_name(model_name: str) -> str:
+    name = NAME_TO_AIDER_MODEL_NAME.get(model_name, model_name)
+    if not name.startswith('openai/') and not name.startswith('azure/'):
+        name = f'openai/{model_name}'
+
+    return name
+
+
+def set_env_vars_fo_model(model_name: str, model_url: Optional[str] = None):
+    if model_name in ['o1-preview', 'gpt-4o']:
+        os.environ['AZURE_API_BASE'] = model_url
+        os.environ['AZURE_API_VERSION'] = '2024-10-21'
+        # Note: Also requires setting AZURE_API_KEY and AZURE_OPENAI_API_KEY beforehand
+    else:
+        os.environ['OPENAI_API_BASE'] = model_url
+        os.environ['OPENAI_API_KEY'] = "sk-123"  # dummy value
 
 
 class AiderCoder(Agent):
     def __init__(
         self,
         model_url: Optional[str] = None,  # Should be "openai/<HF model id>"
+        model_name: Optional[str] = None,
         system_prompt: Optional[str] = None,
         log_llm_metrics=False,
-        model_name: Optional[str] = None,
         stream=False,
-        edit_format='diff'):
-
+        edit_format='diff',
+        max_reflections=5,
+        use_temperature: Union[bool, float] = False,
+        secrets: Optional[dict[str, str]] = None
+    ):
         if system_prompt:
             logging.info('Currently, system prompt for AiderCoder is ignored.')
 
@@ -30,10 +57,12 @@ class AiderCoder(Agent):
             chat_history_file = 'aider.txt'
         io = InputOutput(yes=True, chat_history_file=chat_history_file)
 
-        os.environ['OPENAI_API_BASE'] = model_url
-        os.environ['OPENAI_API_KEY'] = "sk-123"  # dummy value
-        
-        main_model = Model(model_name)
+        set_env_vars_fo_model(model_name, model_url)
+            
+        aider_model_name = get_aider_model_name(model_name)
+        main_model = Model(aider_model_name)
+        if use_temperature is not None:
+            main_model.use_temperature = use_temperature
 
         self._coder = Coder.create(
             main_model=main_model,
@@ -41,15 +70,22 @@ class AiderCoder(Agent):
             stream=stream,
             use_git=False,
             edit_format=edit_format,
-            summarize_from_coder=True
+            summarize_from_coder=True,
         )
+        self._coder.max_reflections = max_reflections
+
+        if secrets:
+            for k, v in secrets.items():
+                os.environ[k] = v
 
     def code(
         self, 
         instruction: str,
+        ideas: Optional[str],
         fnames: str | list[str],
         workspace: Workspace,
         version: int,
+        bug_history: Optional[str] = None,
         max_retries=1
     ) -> str:
         # Update history file
@@ -66,9 +102,20 @@ class AiderCoder(Agent):
         for fname in abs_fnames:
             self._coder.abs_fnames.add(fname)
 
-        coder_out = self._coder.run(instruction)
+        code_prompt = coder_prompts.basic_code_prompt(
+            fnames=fnames,
+            instruction=instruction,
+            ideas=ideas,
+            packages=workspace.packages,
+            bug_history=bug_history
+        )
+
+        coder_out = self._coder.run(code_prompt)
 
         if self._coder.summarizer_thread:
             self._coder.summarizer_thread.join()
 
         return coder_out
+
+    def flush_logs(self, path: str):
+        pass

@@ -19,23 +19,24 @@ class Ideator(Agent):
 		fnames: list[str],
 		workspace: Workspace,
 		version: int,
-		n_ideas=1,
+		ignore_ideas: Optional[str] = None,
+		history: Optional[str] = None,
+		knowledge: Optional[str] = None,
 		max_retries=1
 	) -> tuple[list[str], Optional[dict[str, str]]]:
-		fname = None
-		if len(fnames) > 1:
-			raise ValueError('The base Ideator only supports a single fname.')
-		else:
-			fname = fnames[0]
-
-		code = workspace.view(fname, version=version)
+		abs_paths = [workspace.resolve_path(x, version=version) for x in fnames]
+		code = workspace.view(abs_paths, version=version)
 		summary = workspace.view('results.json', version=version)
+		version_info = workspace.get_version_info(version)
 
-		ideation_prompt = ideator_prompts.GENERATE_CODE_HYPOTHESIS.format(
-			fname=fname,
+		ideation_prompt = ideator_prompts.basic_ideation_prompt(
 			code=code,
 			summary=summary,
-			instruction=instruction
+			instruction=instruction,
+			is_debug=version_info.bug_depth > 0,
+			ignore_ideas=ignore_ideas,
+			history=history,
+			knowledge=knowledge,
 		)
 
 		res_dict = json.loads(self.act(
@@ -46,4 +47,4 @@ class Ideator(Agent):
 
 		hypothesis = res_dict['hypothesis']
 
-		return [hypothesis], {'summary': res_dict['summary']}
+		return hypothesis, {'summary': res_dict['summary']}

@@ -9,8 +9,9 @@ from core.types import ExperimentConfig, SlurmConfig
 from core.agent import Agent
 from core.coders.base import Coder
 from core.ideators.base import Ideator
+from core.knowledge import KnowledgeStore
 from core.runners.science_runner import ScienceRunner
-from core.workspace import Workspace
+from core.workspace import Workspace, VersionInfo
 
 import random
 import json
@@ -29,7 +30,11 @@ class BoNScienceRunner(ScienceRunner):
 		eval_slurm_config: Optional[SlurmConfig] = None,
 		max_retries=3,
 		max_log_len=30_000,
-		n_hypotheses: int = 1,
+		n_hypotheses=1,
+		n_initial_hypotheses=1,
+		debug_prob=0.0,
+		max_bug_depth: Optional[int] = 3,
+		knowledge_src_paths: Optional[list[str]] = None
 	):
 		super().__init__(
 			config=config,
@@ -44,25 +49,53 @@ class BoNScienceRunner(ScienceRunner):
 		)
 
 		self.n_hypotheses = n_hypotheses
+		self.n_initial_hypotheses = n_initial_hypotheses
+		self.debug_prob = debug_prob
+		self.max_bug_depth = max_bug_depth
+
+		self.knowledge = KnowledgeStore(src_paths=knowledge_src_paths)
 
 	def _job_callback(self, version: str, job_results: slurm_utils.JobResult):
 		self.set_results_for_version(version, job_results)
 
 		self.assistant.flush_logs(
-			self.workspace.resolve_path('llm_history.jsonl', 
+			self.workspace.resolve_path('assistant_history.jsonl', 
+			version=version)
+		)
+		self.ideator.flush_logs(
+			self.workspace.resolve_path('ideator_history.jsonl',
+			version=version)
+		)
+		self.ideator.flush_logs(
+			self.workspace.resolve_path('coder_history.jsonl',
 			version=version)
 		)
 
 	async def _run_exp(
 		self,
-		version: str, 
+		version_info: VersionInfo, 
 		metadata: Optional[dict[str, str | int | float, bool]] = None
 	):
+		version = version_info.version
+		history_from_version = version_info.stable_ancestor_version
+		bug_history = self.workspace.view_history(
+			from_version=history_from_version,
+			max_len=3,
+			incl_good_versions=False,
+			incl_buggy_versions=True,
+			incl_ancestors=False,
+			incl_descendents=True,
+			descendent_depth=1,
+			as_string=True
+		)
+
 		coder_out = self.coder.code(
 			instruction=self.code_instructions,
+			ideas=metadata.get('hypothesis'),
 			fnames=self.fnames,
 			workspace=self.workspace,
 			version=version,
+			bug_history=bug_history,
 			max_retries=self.max_retries
 		)
 		print(f'Coder out:\n{coder_out}')
@@ -92,9 +125,10 @@ class BoNScienceRunner(ScienceRunner):
 
 	async def _run_eval(
 		self, 
-		version: str,
+		version_info: VersionInfo,
 		metadata: Optional[dict[str, str | int | float, bool]] = None
 	):
+		version = version_info.version
 		if self.eval_fname is not None:
 			eval_slurm_config = self.eval_slurm_config
 			if not eval_slurm_config:
@@ -118,22 +152,54 @@ class BoNScienceRunner(ScienceRunner):
 			)
 
 	async def run(self, n_iterations=1):
-		# @todo: Bookkeep version based on branching factor
-		# @todo: Add select_elite method
 		open_version = None
 		for i in range(n_iterations):
 			# Request next hypotheses
-			hypotheses, _ = self.ideator.ideate(
-				instruction=self.idea_instructions,
-				fnames=self.fnames,
-				workspace=self.workspace,
-				version='1' if not open_version else open_version,
-				n_ideas=self.n_hypotheses,
-				max_retries=1
-			)
-
-			current_versions = []
+			relevant_history = None
+			is_debugging = False
 			if open_version is not None:
+				open_version_info = self.workspace.get_version_info(open_version)
+				is_debugging = open_version_info.bug_depth > 0
+				history_from_version = open_version_info.stable_ancestor_version
+				relevant_history = self.workspace.view_history(
+					from_version=history_from_version,
+					max_len=3,
+					incl_good_versions=True,
+					incl_buggy_versions=True,
+					incl_ancestors=True,
+					incl_descendents=True,
+					ancestor_depth=3,
+					descendent_depth=1,
+					as_string=True
+				)
+
+			# By default, we branch n_hypotheses experiments per iteration, but
+			# keep the branch factor to be 1 when debugging a previous version.
+			# First iteration's branch factor can be set separately to mimic AIDE.
+			n_hypotheses = self.n_hypotheses
+			if is_debugging:
+				n_hypotheses = 1
+			elif i == 0:
+				n_hypotheses = self.n_initial_hypotheses
+
+			hypotheses = []
+			for _ in range(n_hypotheses):  
+				# @todo: Should parallelize on main, but low priority for now
+				# to avoid getting rate-limited on Azure
+				hypothesis, _ = self.ideator.ideate(
+					instruction=self.idea_instructions,
+					fnames=self.fnames,
+					workspace=self.workspace,
+					version='1' if not open_version else open_version,
+					ignore_ideas=hypotheses,  # Avoid duplicating previous ideas
+					history=relevant_history,
+					knowledge=self.knowledge.search(as_string=True),
+					max_retries=1
+				)
+				hypotheses.append(hypothesis)
+
+			current_versions = ['0']
+			if open_version is not None and open_version not in current_versions:
 				current_versions.append(open_version)  # Always consider best so far
 
 			version2metadata = {}
@@ -146,7 +212,7 @@ class BoNScienceRunner(ScienceRunner):
 					version = '1'
 				elif i == 0:
 					# All first generation hypotheses branch from template
-					version = self.workspace.create_version()
+					version = self.workspace.create_version(from_version='0')
 				else:
 					# All other hypotheses branch from best version so far
 					prev_version = open_version
@@ -160,8 +226,9 @@ class BoNScienceRunner(ScienceRunner):
 				}
 
 				# Schedule experiments for all hypotheses
+				version_info = self.workspace.get_version_info(version)
 				await self._run_exp(
-					version=version,
+					version_info=version_info,
 					metadata=version2metadata[version]
 				)
 
@@ -170,15 +237,25 @@ class BoNScienceRunner(ScienceRunner):
 
 			if self.eval_fname is not None:
 				for version in current_versions:
+					version_info = self.workspace.get_version_info(version)
 					metadata = version2metadata[version]
-					self._run_eval(version=version, metadata=metadata)
+					self._run_eval(
+						version_info=version_info,
+						metadata=metadata
+					)
 
 				await slurm_utils.JobObserver.shared.wait()
 
-			# Set open set to the top-1 version
-			open_version = self.workspace.get_top_k_versions(
-				selection_metric=self.selection_metric,
-				from_versions=current_versions,
-				lower_is_better=self.lower_is_better,
-				k=1
-			)[0]
+			# If debug, then select a buggy leaf snapshot to debug
+			buggy_versions = self.workspace.get_buggy_versions(
+				is_leaf=True, max_bug_depth=self.max_bug_depth
+			)
+			if len(buggy_versions) and np.random.rand() < self.debug_prob:
+				open_version = np.random.choice(buggy_versions).version
+			else: # Otherwise set open set to the top-1 version
+				open_version = self.workspace.get_top_k_versions(
+					selection_metric=self.selection_metric,
+					from_versions=current_versions,
+					lower_is_better=self.lower_is_better,
+					k=1
+				)[0].version
