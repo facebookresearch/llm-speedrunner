@@ -41,4 +41,3 @@ workspace_templates/mlebench/**
 
 # submitit
 submitit_logs/
-
