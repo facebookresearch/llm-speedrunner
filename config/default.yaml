@@ -1,8 +1,8 @@
 defaults:
   - _self_
   - secrets: default
-  - task: nanogpt_10112024
-  - model: o1_preview
+  - task: collatz
+  - model: r1_32b
   - science_runner: bon
   - ideator: base
   - coder: aider
