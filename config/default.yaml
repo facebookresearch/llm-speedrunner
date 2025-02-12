@@ -6,7 +6,6 @@ defaults:
   - science_runner: bon
   - ideator: base
   - coder: aider
-
   - override hydra/hydra_logging: disabled  
   - override hydra/job_logging: disabled  
 
@@ -19,7 +18,7 @@ node_id: dummy
 
 log_llm_metrics: True
 
-n_iterations: 10
+n_iterations: 5
 
 system_prompt: >-
   You are a machine learning scientist, with expertise in 

@@ -38,3 +38,7 @@ config/task/mlebench/**
 workspace_templates/mlebench/**
 !workspace_templates/mlebench/base/
 !workspace_templates/mlebench/base/*
+
+# submitit
+submitit_logs/
+
