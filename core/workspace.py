@@ -85,7 +85,7 @@ class Workspace:
         self.version_infos = {info.version: info for info in self.load_version_info()}
 
         if self.n_versions == 0:
-            self.create_version(from_path=template_dir)
+            self.create_version(from_path=template_dir, ignore_list=[])
             self.create_version(from_version='0')
 
     def _get_version_dirs(self) -> list[str]:
@@ -178,7 +178,8 @@ class Workspace:
     def create_version(
         self, 
         from_path: Optional[str] = None, 
-        from_version: Optional[str] = None
+        from_version: Optional[str] = None,
+        ignore_list: Optional[str] = None
     ) -> int:
         """Create new version directory, copying all contents in from_path."""
         new_version = str(self.n_versions)
@@ -196,7 +197,9 @@ class Workspace:
             src_path = fs_utils.expand_path(self.template_dir)
 
         if src_path is not None:
-            fs_utils.cp_dir(src_path, new_version_dir_path, ignore_list=self.ignore_list)
+            if ignore_list is None:
+                ignore_list = self.ignore_list
+            fs_utils.cp_dir(src_path, new_version_dir_path, ignore_list=ignore_list)
 
         if from_version is not None:
             # Add a meta.json file with parent info to new version

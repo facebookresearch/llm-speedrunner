@@ -27,6 +27,8 @@ exp_config_args:
     Besides solution.py, you may not create any extra files or modify any other files
     in the directory.
 
+    Remember to define all necessary functions before the `if __name__ == '__main__'` block.
+
     Your code will be run on a machine with a single H100 GPU.
 
   entry_fname: solution.py

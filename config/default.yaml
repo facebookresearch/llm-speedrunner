@@ -33,10 +33,19 @@ workspace_args:
     - numpy
     - numba
     - pandas
-    - torch
-    - cudatoolkit
+    - pillow
     - scipy
+    - scikit-learn
+    - statsmodels
+    - xgboost
+    - lightgbm
+    - bayesian-optimization
+    - torch
     - torchvision
+    - torch-geometric
+    - timm
+    - cudatoolkit
+
   ignore_list:
     - assistant_history.jsonl
     - ideator_history.jsonl
