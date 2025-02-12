@@ -11,8 +11,9 @@ In the summary, the "hypothesis" value refers to the original hypothesis motivat
 {summary}
 
 First, summarize at a high level what the current implementation does.
-Then, come up with a new hypothesis for how you can improve the code to achieve the following:
+Then, come up with a new hypothesis for how you can improve the code to achieve the following task:
 
+# Task description
 {instruction}
 
 Be methodical and scientific in suggesting changes. Avoid suggesting too many conceptual changes to the code at once, though some individual ideas may require more lines of code change, which is okay. Remember: Quality over quantity.
@@ -28,8 +29,9 @@ Consider the issues described in the following summary, which occur when running
 {summary}
 
 First summarize at a high level what the current implementation does and why the bug might arise. 
-Then come up with a hypothesis for how you can fix these issues with the code, while making sure that it achieves the following:
+Then come up with a hypothesis for how you can fix these issues with the code, while making sure that it solves the following task:
 
+# Task description
 {instruction}
 """
 
@@ -63,13 +65,13 @@ KNOWLEDGE_INFO_COMPONENT = """You may also wish to consider the following releva
 def basic_ideation_prompt(
 	code: str,
 	summary: str, 
-	instruction: str,
+	task_description: str,
 	is_debug=False,
 	ignore_ideas: Optional[list[str]] = None,
 	history: Optional[str] = None,
 	knowledge: Optional[str] = None,
 ):
-	instructions = [instruction]
+	instructions = [task_description]
 
 	if ignore_ideas:
 		ignore_list = '\n'.join([f'<idea>{x}</idea>' for x in ignore_ideas])

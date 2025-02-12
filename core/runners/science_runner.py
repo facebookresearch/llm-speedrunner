@@ -2,10 +2,12 @@ from typing import Callable, Optional, Union
 import dataclasses
 import json
 import logging
+import os
 
 from utils import metrics_utils
 from utils import slurm_utils
 from utils import str_utils
+from utils import fs_utils
 from core.types import ExperimentConfig, SlurmConfig
 from core.agent import Agent
 from core.coders.base import Coder
@@ -29,7 +31,21 @@ class ScienceRunner:
         max_log_len=30_000
     ):
         self.preamble = config.preamble
-        self.idea_instructions = config.idea_instructions
+        
+        # Load task description file in template dir if provided
+        task_description = config.task_description
+        if config.task_description_file:
+            task_description_path = workspace.resolve_path(
+                config.task_description_file,
+                version='0'
+            )
+
+            if os.path.exists(task_description_path):
+                with open(task_description_path, 'r') as f:
+                    task_description = f.read().strip()
+        assert task_description, 'Must provide a valid task description.'
+        self.task_description = task_description
+
         self.code_instructions = config.code_instructions
         self.fnames = config.fnames
 
@@ -64,7 +80,7 @@ class ScienceRunner:
         log_err = job_results.log_err[0][-self.max_log_len:]
         outcome_summary = self.assistant.act(
             analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(
-                goal=self.idea_instructions,
+                goal=self.task_description,
                 log_out=log_out,
                 log_err=log_err
             ),

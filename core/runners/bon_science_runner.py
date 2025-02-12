@@ -90,6 +90,7 @@ class BoNScienceRunner(ScienceRunner):
 		)
 
 		coder_out = self.coder.code(
+			task_description=self.task_description,
 			instruction=self.code_instructions,
 			ideas=metadata.get('hypothesis'),
 			fnames=self.fnames,
@@ -134,7 +135,7 @@ class BoNScienceRunner(ScienceRunner):
 			if not eval_slurm_config:
 				eval_slurm_config = self.slurm_config
 
-			if self.eval_slurm_config.use_torchrun:
+			if eval_slurm_config.use_torchrun:
 				command = self.eval_fname
 			else:
 				command = f'python {self.eval_fname}'
@@ -142,11 +143,11 @@ class BoNScienceRunner(ScienceRunner):
 			eval_job = slurm_utils.submit_job(
 				command=f"python {self.eval_fname}", 
 				working_dir=self.workspace.resolve_path(version=version),
-				**dataclasses.asdict(self.eval_slurm_config)
+				**dataclasses.asdict(eval_slurm_config)
 			)
 
 			slurm_utils.JobObserver.shared.observe(
-				job=job,
+				job=eval_job,
 				metadata=metadata,
 				callback=lambda res: self._job_callback(version, res)
 			)
@@ -187,7 +188,7 @@ class BoNScienceRunner(ScienceRunner):
 				# @todo: Should parallelize on main, but low priority for now
 				# to avoid getting rate-limited on Azure
 				hypothesis, _ = self.ideator.ideate(
-					instruction=self.idea_instructions,
+					task_description=self.task_description,
 					fnames=self.fnames,
 					workspace=self.workspace,
 					version='1' if not open_version else open_version,
@@ -236,17 +237,22 @@ class BoNScienceRunner(ScienceRunner):
 			await slurm_utils.JobObserver.shared.wait()
 
 			if self.eval_fname is not None:
+				print('EVALUATING via', self.eval_fname)
 				for version in current_versions:
+					if version == '0' or version == open_version:
+						continue
+
 					version_info = self.workspace.get_version_info(version)
 					metadata = version2metadata[version]
-					self._run_eval(
+					await self._run_eval(
 						version_info=version_info,
 						metadata=metadata
 					)
 
+				print('Waiting for evals to finish')
 				await slurm_utils.JobObserver.shared.wait()
 
-			# If debug, then select a buggy leaf snapshot to debug
+			# If debug, then select a buggy leaf version to debug
 			buggy_versions = self.workspace.get_buggy_versions(
 				is_leaf=True, max_bug_depth=self.max_bug_depth
 			)

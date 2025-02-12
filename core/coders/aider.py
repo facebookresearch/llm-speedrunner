@@ -46,6 +46,7 @@ class AiderCoder(Agent):
         stream=False,
         edit_format='diff',
         max_reflections=5,
+        detect_urls=False,
         use_temperature: Union[bool, float] = False,
         secrets: Optional[dict[str, str]] = None
     ):
@@ -73,6 +74,7 @@ class AiderCoder(Agent):
             summarize_from_coder=True,
         )
         self._coder.max_reflections = max_reflections
+        self._coder.detect_urls = detect_urls
 
         if secrets:
             for k, v in secrets.items():
@@ -80,7 +82,8 @@ class AiderCoder(Agent):
 
     def code(
         self, 
-        instruction: str,
+        task_description: str,
+        instruction: Optional[str],
         ideas: Optional[str],
         fnames: str | list[str],
         workspace: Workspace,
@@ -103,9 +106,10 @@ class AiderCoder(Agent):
             self._coder.abs_fnames.add(fname)
 
         code_prompt = coder_prompts.basic_code_prompt(
-            fnames=fnames,
+            task_description=task_description,
             instruction=instruction,
             ideas=ideas,
+            fnames=fnames,
             packages=workspace.packages,
             bug_history=bug_history
         )

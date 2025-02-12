@@ -14,9 +14,10 @@ from core.prompts import coder_prompts
 class Coder(Agent):
 	def code(
 		self, 
-		instruction: str,
-        ideas: str,
-		fnames: list[str],
+        task_description: str,
+        instruction: Optional[str],
+        ideas: Optional[str],
+        fnames: str | list[str],
 		workspace: Workspace,
 		version: int,
 		bug_history: Optional[str] = None,
@@ -26,9 +27,10 @@ class Coder(Agent):
 		code = workspace.view(abs_paths, version=version)
 				
 		update_prompt = coder_prompts.basic_code_prompt(
-			fnames=fnames,
+			task_description=task_description,
 			instruction=instruction,
 			ideas=ideas,
+			fnames=fnames,
 			code=code,
 			packages=workspace.packges,
 			bug_history=bug_history

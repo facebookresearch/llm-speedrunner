@@ -15,10 +15,12 @@ PACKAGE_INFO_COMPONENT= """**Never** install or ask to install any additional pa
 """
 
 
-BASIC_CODE_PROMPT = """Your goal is to implement the following ideas for improving the code:
+BASIC_CODE_PROMPT = """Your goal is to implement the following ideas to improve the code so that it better achieves the task:
 
+# Ideas
 {ideas}
 
+# Task description
 {instruction}
 
 I trust you to make good decisions, so do not ask me for permission to make any code changes. 
@@ -29,9 +31,10 @@ In your final response, include ONLY the fully-functional updated code which imp
 
 
 def basic_code_prompt(
-	fnames: list[str], 
-	instruction: str,
-	ideas: Optional[str] = None,
+	task_description: str, 
+	fnames: list[str],
+	instruction: Optional[str],
+	ideas: Optional[str],
 	code: Optional[str] = None,
 	packages: Optional[list[str]] = None,
 	bug_history: Optional[str] = None,
@@ -45,7 +48,9 @@ def basic_code_prompt(
 	if code:
 		preamble = preamble + '\n' + code + '\n'
 
-	instructions = [instruction + '\n']
+	instructions = [task_description + '\n']
+	if instruction:
+		instructions.append(instruction + '\n')
 	if packages:
 		package_list = '\n'.join([f'- {x}' for x in packages])
 		instructions.append(
