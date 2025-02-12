@@ -29,3 +29,6 @@ figures/
 
 # Aider
 aider.txt
+
+# submitit
+submitit_logs/
