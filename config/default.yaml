@@ -43,6 +43,7 @@ workspace_args:
     - coder_history.jsonl
     - aider.txt
     - meta.json
+    - results.json
     - cache
 
 assistant_args:

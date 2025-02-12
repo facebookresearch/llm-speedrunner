@@ -24,10 +24,15 @@ class Ideator(Agent):
 		knowledge: Optional[str] = None,
 		max_retries=1
 	) -> tuple[list[str], Optional[dict[str, str]]]:
-		abs_paths = [workspace.resolve_path(x, version=version) for x in fnames]
-		code = workspace.view(abs_paths, version=version)
-		summary = workspace.view('results.json', version=version)
 		version_info = workspace.get_version_info(version)
+		assert version_info.parent_version is not None, 'Version must have a parent'
+		parent_version_info = workspace.get_version_info(version_info.parent_version)
+		parent_version = parent_version_info.version
+
+		# Generate new ideas based on the contents of the parent version
+		abs_paths = [workspace.resolve_path(x, version=parent_version) for x in fnames]
+		code = workspace.view(abs_paths, version=parent_version)
+		summary = workspace.view('results.json', version=parent_version)
 
 		ideation_prompt = ideator_prompts.basic_ideation_prompt(
 			code=code,
