@@ -1,4 +1,5 @@
 from typing import Optional
+import fnmatch
 import os
 import shutil
 
@@ -6,6 +7,17 @@ import shutil
 def expand_path(path: str) -> str:
     """Expands path into an absolute path."""
     return os.path.abspath(os.path.expanduser(path))
+
+
+def fname_matches_any(fname: str, patterns: Optional[list[str]] = None) -> bool:
+    if not patterns:
+        return False
+
+    for pattern in patterns:
+        if fnmatch.fnmatch(fname, pattern):
+            return True
+
+    return False
 
 
 def cp_dir(src_dir: str, target_dir: str, ignore_list: Optional[list[str]] = None,):
@@ -37,7 +49,7 @@ def cp_dir(src_dir: str, target_dir: str, ignore_list: Optional[list[str]] = Non
 
         # Copy all files in the current directory
         for file in files:
-            if os.path.basename(file) in ignore_list:
+            if fname_matches_any(os.path.basename(file), ignore_list):
                 continue
 
             src_file = os.path.join(root, file)
@@ -46,7 +58,7 @@ def cp_dir(src_dir: str, target_dir: str, ignore_list: Optional[list[str]] = Non
 
         # Ensure dirs are created in the target
         for dir_name in dirs:
-            if os.path.basename(dir_name) in ignore_list:
+            if fname_matches_any(os.path.basename(dir_name), ignore_list):
                 continue
 
             src_subdir = os.path.join(root, dir_name)

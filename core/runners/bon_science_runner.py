@@ -55,8 +55,13 @@ class BoNScienceRunner(ScienceRunner):
 
 		self.knowledge = KnowledgeStore(src_paths=knowledge_src_paths)
 
-	def _job_callback(self, version: str, job_results: slurm_utils.JobResult):
-		self.set_results_for_version(version, job_results)
+	def _job_callback(
+		self,
+		version: str,
+		job_results: slurm_utils.JobResult,
+		eval_job_results: Optional[slurm_utils.JobResult] = None
+	):
+		self.set_results_for_version(version, job_results, eval_job_results)
 
 		self.assistant.flush_logs(
 			self.workspace.resolve_path('assistant_history.jsonl', 
@@ -117,6 +122,10 @@ class BoNScienceRunner(ScienceRunner):
 		callback = None
 		if self.eval_fname is None:
 			callback = lambda res: self._job_callback(version, res)
+		else:  # We save the job result to pass into the eval callback
+			def record_job_result(res: slurm_utils.JobResult):
+				metadata[version] = res
+			callback = lambda res: record_job_result(res)
 
 		slurm_utils.JobObserver.shared.observe(
 			job=job,
@@ -146,10 +155,11 @@ class BoNScienceRunner(ScienceRunner):
 				**dataclasses.asdict(eval_slurm_config)
 			)
 
+			job_result = metadata.get(version)
 			slurm_utils.JobObserver.shared.observe(
 				job=eval_job,
 				metadata=metadata,
-				callback=lambda res: self._job_callback(version, res)
+				callback=lambda res: self._job_callback(version, job_result, res)
 			)
 
 	async def run(self, n_iterations=1):

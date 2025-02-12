@@ -75,7 +75,12 @@ class ScienceRunner:
     def get_instruction(self, instruction: str) -> str:
         return '\n'.join([self.preamble, instruction])
 
-    def set_results_for_version(self, version: str, job_results: slurm_utils.JobResult):
+    def set_results_for_version(
+        self,
+        version: str,
+        job_results: slurm_utils.JobResult,
+        eval_job_results: Optional[slurm_utils.JobResult] = None
+    ):  
         log_out = job_results.log_out[0][-self.max_log_len:]
         log_err = job_results.log_err[0][-self.max_log_len:]
         outcome_summary = self.assistant.act(
@@ -88,11 +93,15 @@ class ScienceRunner:
         )
         print(f'outcome_summary:\n{outcome_summary}')
 
+        eval_log_out = log_out
+        if eval_job_results is not None:
+            eval_log_out = eval_job_results.log_out[0][-self.max_log_len:]
+
         # Parse metrics from log file
         metrics = {}
         if self.metric_types is not None:
             metrics = metrics_utils.extract_best_line_metrics(
-                log_out, 
+                eval_log_out, 
                 metric_types=self.metric_types,
                 selection_metric=self.selection_metric,
                 lower_is_better=self.lower_is_better,
@@ -109,7 +118,9 @@ class ScienceRunner:
             metric_types_str = json.dumps({k: type(v).__name__ for k, v in summary.get('metrics', {}).items()})
             try:
                 metrics_response = self.assistant.act(
-                    analysis_prompts.PARSE_METRICS_FROM_LOGS.format(logs=log_out, metric_types=metric_types_str),
+                    analysis_prompts.PARSE_METRICS_FROM_LOGS.format(
+                        logs=eval_log_out, metric_types=metric_types_str
+                    ),
                     validator=lambda x: validators.validate_json(x, metric_types),
                     max_retries=self.max_retries
                 )
@@ -143,10 +154,11 @@ class ScienceRunner:
                 from_version=version_info.parent_version
             )
 
+        metadata = str_utils.get_serializable_dict_subset(job_results.metadata)
         job_results = {
             'status': job_results.status.value,
             'metrics': metrics,
-            **job_results.metadata,
+            **metadata,
             'outcome_summary': outcome_summary
         }
 

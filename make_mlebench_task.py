@@ -1,14 +1,23 @@
-'''Creates a <task id>.yaml file at config/task/mlebench for the specified MLE-Bench.
+"""Automatically create the necessary config and workspace template for an MLE-Bench task.
 
-Usage:
+Creates a task config at config/task/mlebench/<task id>.yaml, and creates a workspace template
+at workspace_templates/mlebench/<task id>. 
+
+In the generated artifacts, <task id> is the snake-case version of the MLE-Bench task ID.
+
+
+IMPORTANT: In order for this script to run without any errors, you must first go to your 
+MLE-Bench directory (from where you called its initial setup.py script), and comment out
+the logging.info(...) line in data.py in the ensure_leaderboard_exists function. Their 
+usage of relative_to to compute a relative path is not robust and will likely lead to an error.
+
+Example usage:
 
 python make_mlebench_task.py \
 --task_id=random-acts-of-pizza \
---cache_dir_path=/checkpoint/maui/minqijiang/data/ \
---config_dir_path=config/task/mlebench \
---workspace_template_dir_path=workspace_templates/mlebench
+--cache_dir_path=/checkpoint/maui/minqijiang/data
 
-'''
+"""
 import argparse
 import os
 import json
