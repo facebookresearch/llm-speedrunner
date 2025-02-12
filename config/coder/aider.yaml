@@ -11,3 +11,4 @@ coder_args:
   edit_format: "diff"
   max_reflections: 5
   use_temperature: 0.6  # Ignored for o1 models
+  abs_read_only_fnames: ${abs_read_only_fnames}

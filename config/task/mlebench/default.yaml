@@ -14,8 +14,8 @@ exp_config_args:
 
   code_instructions: >-
     Write a single file called solution.py that does the following:\n
-      - Loads the training data from os.environ['TRAIN_DATA_PATH']\n
-      - Loads the test data from os.environ['TEST_DATA_PATH']\n
+      - Loads any relevant training data described in the task description.
+      - Loads any relevant test data described in the task description.
       - It is important your code references the training and test data paths exactly as above,
         via these environment variables, which will already be set correctly for you.\n
       - Performs any arbitrary training and evaluation logic on this data split.
@@ -23,6 +23,9 @@ exp_config_args:
         of k-fold cross validation for model and hyperparameter selection.\n
       - Finally, evaluates the final model on the test data and writes the results
         to a file in the current directory called submission.csv.\n
+
+    All files and directories described in the task description are located under the PUBLIC_RESOURCE_PATH,
+    whose value is always available via os.environ.get('PUBLIC_RESOURCE_PATH').
     
     Besides solution.py, you may not create any extra files or modify any other files
     in the directory.
@@ -45,7 +48,7 @@ exp_config_args:
     total_bronze_medals: int
     total_above_median: int
 
-  selection_metric: total_medals
+  selection_metric: score
   lower_is_better: false
 
 

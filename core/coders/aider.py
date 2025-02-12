@@ -48,6 +48,7 @@ class AiderCoder(Agent):
         max_reflections=5,
         detect_urls=False,
         use_temperature: Union[bool, float] = False,
+        abs_read_only_fnames: Optional[list[str]] = None,
         secrets: Optional[dict[str, str]] = None
     ):
         if system_prompt:
@@ -75,6 +76,7 @@ class AiderCoder(Agent):
         )
         self._coder.max_reflections = max_reflections
         self._coder.detect_urls = detect_urls
+        self._coder.abs_read_only_fnames = abs_read_only_fnames
 
         if secrets:
             for k, v in secrets.items():

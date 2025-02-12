@@ -25,9 +25,12 @@ class Ideator(Agent):
 		max_retries=1
 	) -> tuple[list[str], Optional[dict[str, str]]]:
 		version_info = workspace.get_version_info(version)
-		assert version_info.parent_version is not None, 'Version must have a parent'
-		parent_version_info = workspace.get_version_info(version_info.parent_version)
-		parent_version = parent_version_info.version
+		if version == '0':
+			parent_version = version
+		else:
+			assert version_info.parent_version is not None, 'Version must have a parent'
+			parent_version_info = workspace.get_version_info(version_info.parent_version)
+			parent_version = parent_version_info.version
 
 		# Generate new ideas based on the contents of the parent version
 		abs_paths = [workspace.resolve_path(x, version=parent_version) for x in fnames]

@@ -1,9 +1,7 @@
 import os
 
-# Paths to train and test data .json files
-# Note these are .json files, and NOT .jsonl files.
-TRAIN_DATA_PATH = os.environ.get("TRAIN_DATA_PATH")
-TEST_DATA_PATH = os.environ.get("TEST_DATA_PATH")
+# All mentioned files and directories are located under this path
+PUBLIC_RESOURCE_PATH = os.environ.get('PUBLIC_RESOURCE_PATH')
 
 
 def main():

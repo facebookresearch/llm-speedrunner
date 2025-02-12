@@ -54,6 +54,7 @@ workspace_args:
     - meta.json
     - results.json
     - cache
+    - preview_resources.txt
 
 assistant_args:
   _target_: core.agent.Agent
@@ -63,4 +64,5 @@ assistant_args:
   system_prompt: ${system_prompt}
   log_llm_metrics: ${log_llm_metrics}
 
+abs_read_only_fnames: null
 knowledge_src_paths: []
