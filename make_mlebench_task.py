@@ -79,6 +79,7 @@ def main():
                 preview = f'# {os.path.basename(fname)}\n{preview}\n\n'
                 combined_preview += preview
 
+    os.makedirs(task_template_path, exist_ok=True)
     combined_preview_file = os.path.join(task_template_path, 'preview_resources.txt')
     with open(combined_preview_file, 'w') as f:
         f.write(combined_preview)
@@ -107,8 +108,6 @@ def main():
     print(f'Created config file at: {config_file_path}')
 
     # ==== Set up workspace template and fill its contents ====
-    os.makedirs(task_template_path, exist_ok=True)
-
     # mlebench's grader expects this submission.jsonl to specify the submission file
     submission_jsonl = os.path.join(task_template_path, 'submission.jsonl')
     with open(submission_jsonl, 'w') as f:

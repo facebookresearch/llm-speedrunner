@@ -36,7 +36,7 @@ class BoNScienceRunner(ScienceRunner):
 		max_bug_depth: Optional[int] = 3,
 		knowledge_src_paths: Optional[list[str]] = None
 	):
-		super().__init__(
+	super().__init__(
 			config=config,
 			workspace=workspace,
 			assistant=assistant,

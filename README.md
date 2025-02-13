@@ -69,12 +69,16 @@ Adding a new task requires only a few steps:
 
 #### Automatically import an MLE-Bench task
 
+Before adding any Kaggle, first make sure you have stored your kaggle login credentials at `~/.kaggle/kaggle.json`.
+
 You can use the script `make_mlebench_task.py` to automatically generate a scientist task config based on an MLE-Bench task's competition ID. The below command will generate the necessary files in `task/config/mlebench` and `workspace_templates/mlebench` for MLE-Bench task `random_acts_of_pizza`:
 ```bash
 python make_mlebench_task.py \
 --task_id=random-acts-of-pizza \
 --cache_dir_path=/path/for/storing/kaggle/datasets
 ```
+
+The first time you run this command for a new MLE-Bench task, you will be asked to visit the competition page in your browser to accept the competition rules.
 
 You can then run the scientist with this task as follows by specifying the task in the launch command as follows: `python launch_scientist.py task=mlebench/random_acts_of_pizza`. Note that we convert the task ID (also referred to as "competition ID") from kebab to snake case. 
 
