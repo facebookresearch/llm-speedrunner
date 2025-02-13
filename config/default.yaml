@@ -64,5 +64,5 @@ assistant_args:
   system_prompt: ${system_prompt}
   log_llm_metrics: ${log_llm_metrics}
 
-abs_read_only_fnames: null
+abs_read_only_fnames: []
 knowledge_src_paths: []
