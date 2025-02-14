@@ -1,6 +1,8 @@
-from typing import Optional
+from typing import Optional, Tuple
+from pathlib import Path
 import fnmatch
 import os
+import tempfile
 import shutil
 
 
@@ -64,3 +66,28 @@ def cp_dir(src_dir: str, target_dir: str, ignore_list: Optional[list[str]] = Non
             src_subdir = os.path.join(root, dir_name)
             target_subdir = os.path.join(target_path, dir_name)
             os.makedirs(target_subdir, exist_ok=True)
+
+
+def create_unique_temp_folder(parent_dir: str, name: str) -> Tuple[Path, str]:
+    """
+    Create a unique temporary folder under <submitit_log_dir>/local/ using the given name as a prefix.
+    Returns both the full folder path and the unique hash part (the suffix after the prefix).
+
+    Args:
+      submitit_log_dir (str or Path): The base directory.
+      name (str): The prefix for the folder name.
+
+    Returns:
+      tuple(Path, str): (full folder Path, unique hash as a string)
+    """
+    base_dir = Path(parent_dir)
+    base_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create the directory. mkdtemp returns a full path that starts with name + '_'
+    full_folder = tempfile.mkdtemp(prefix=name + "_", dir=str(base_dir))
+    full_folder_path = Path(full_folder)
+    
+    prefix = name + "_"
+    unique_hash = full_folder_path.name[len(prefix):]
+    
+    return full_folder_path, unique_hash

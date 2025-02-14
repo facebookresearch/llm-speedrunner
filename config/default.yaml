@@ -66,3 +66,7 @@ assistant_args:
 
 abs_read_only_fnames: []
 knowledge_src_paths: []
+
+slurm_config_args:
+  _target_: core.types.SlurmConfig
+  use_local_runs: false

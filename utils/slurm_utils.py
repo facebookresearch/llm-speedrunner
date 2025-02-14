@@ -1,24 +1,30 @@
 from enum import Enum
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Callable, Optional, Tuple
 
 import asyncio
 import dataclasses
+import os
+import pickle
 import re
 import submitit
 import subprocess
 
+from utils import fs_utils
+
 
 class JobStatus(Enum):
-    COMPLETED = "COMPLETED"
-    PREEMPTED = "PREEMPTED"
-    FAILED = "FAILED"
-    CANCELLED = "CANCELLED"
-    UNKNOWN = "UNKNOWN"
+    COMPLETED = 'COMPLETED'
+    PREEMPTED = 'PREEMPTED'
+    FAILED = 'FAILED'
+    CANCELLED = 'CANCELLED'
+    UNKNOWN = 'UNKNOWN'
 
 
 @dataclasses.dataclass
 class JobResult:
-    """Aggregate information about the finished job."""
+    '''Aggregate information about the finished job.'''
     job_id: str
     metadata: dict[str, str | int | float, bool]
     status: JobStatus
@@ -29,7 +35,7 @@ class JobResult:
 
 
 class JobObserver:
-    """Manages a pool of asyncio tasks for observing submitit job status."""
+    '''Manages a pool of asyncio tasks for observing submitit job status.'''
     shared = None  # Singleton
 
     def __init__(self):
@@ -44,7 +50,7 @@ class JobObserver:
         focus_rank: Optional[int] = None,
         poll_interval: int = 10,
     ) -> None:
-        """
+        '''
         Observe the status of a submitit job, and execute a callback when finished.
 
         Args:
@@ -53,7 +59,7 @@ class JobObserver:
             callback (Callable[[JobResult], None]): Called after job finishes with the JobResult.
             focus_rank (Optional[int]): If set, only fetch logs from that subtask index.
             poll_interval (int): How often (seconds) to poll the job status.
-        """
+        '''
         task = asyncio.create_task(
             self._observe_job(
                 job=job,
@@ -66,7 +72,7 @@ class JobObserver:
         self._observing_tasks.append(task)
 
     async def wait(self) -> None:
-        """Returns only when all observed jobs and their callbacks are complete."""
+        '''Returns only when all observed jobs and their callbacks are complete.'''
         if self._observing_tasks:
             await asyncio.gather(*self._observing_tasks)
 
@@ -78,17 +84,17 @@ class JobObserver:
         callback: Optional[Callable[[JobResult], None]] = None,
         metadata: Optional[dict[str, str | int | float, bool]] = None,
     ) -> None:
-        """
+        '''
         Loop that periodically checks the job until it's done,
         then calls the user-specified callback with a JobResult.
-        """
+        '''
         while not job.done():
             print('polling job', job, job.done(), job.state.upper(), flush=True)
             await asyncio.sleep(poll_interval)
 
         # Once we exit the loop, the job is done from Submitit's perspective,
         # meaning it's not in [PENDING, RUNNING, REQUEUED, ...].
-        slurm_state = job.state.upper() if job.state else "UNKNOWN"
+        slurm_state = job.state.upper() if job.state else 'UNKNOWN'
         status = self._map_slurm_state_to_job_status(slurm_state, job)
 
         # Gather logs (stdout & stderr). Focus rank is optional.
@@ -111,22 +117,22 @@ class JobObserver:
         slurm_state: str,
         job: submitit.Job
     ) -> JobStatus:
-        """
+        '''
         Convert a Slurm or Submitit job state to simpler JobStatus states
-        """
-        if slurm_state == "COMPLETED":
+        '''
+        if slurm_state == 'COMPLETED':
             return JobStatus.COMPLETED
 
-        elif slurm_state == "RUNNING":
+        elif slurm_state == 'RUNNING':
             return JobStatus.PREEMPTED
 
-        elif slurm_state in ("CANCELLED"):
+        elif slurm_state in ('CANCELLED'):
             return JobStatus.CANCELLED
 
         elif job.exception() is not None:
             return JobStatus.FAILED
 
-        elif slurm_state in ("FAILED", "NODE_FAIL", "TIMEOUT"):
+        elif slurm_state in ('FAILED', 'NODE_FAIL', 'TIMEOUT'):
             return JobStatus.FAILED
 
         return JobStatus.UNKNOWN
@@ -136,28 +142,28 @@ class JobObserver:
         job: submitit.Job,
         focus_rank: Optional[int]
     ) -> Tuple[list[str], list[str]]:
-        """
+        '''
         Gathers job stdout/stderr logs as lists of strings.
 
         If focus_rank is given, only logs for that subtask index.
         Otherwise, all tasks in an array job (or the single task in a normal job).
-        """
+        '''
         # If a particular rank is requested, only retrieve logs from that subtask
         if focus_rank is not None:
             subjob = job.task(focus_rank)
-            out = subjob.stdout() or ""
-            err = subjob.stderr() or ""
+            out = subjob.stdout() or ''
+            err = subjob.stderr() or ''
             return [out], [err]
 
         # If the job has no subtasks (single job), gather from itself
         if not job._sub_jobs:
-            return [job.stdout() or ""], [job.stderr() or ""]
+            return [job.stdout() or ''], [job.stderr() or '']
 
         # Otherwise, gather from each subtask in the array job
         outs, errs = [], []
         for sub in job._sub_jobs:
-            out = sub.stdout() or ""
-            err = sub.stderr() or ""
+            out = sub.stdout() or ''
+            err = sub.stderr() or ''
             outs.append(out)
             errs.append(err)
         return outs, errs
@@ -179,9 +185,10 @@ def submit_job(
     log_dir='submitit_logs',
     bwrap=True,
     env_vars: Optional[dict[str, str]] = None,
-    use_torchrun=False
+    use_torchrun=False,
+    use_local_runs=False,
 ):
-    """
+    '''
     Launches a SLURM job using submitit with the specified arguments.
 
     Args:
@@ -197,7 +204,17 @@ def submit_job(
 
     Returns:
         str: Job ID of the submitted SLURM job.
-    """
+    '''
+    # Local runs
+    if use_local_runs:
+        # Simulate job and return it
+        return simulate_local_submitit_job(
+            command=command,
+            working_dir=working_dir,
+            log_dir=log_dir,
+            env_vars=env_vars
+        )
+
     # Create a Submitit executor
     executor = submitit.AutoExecutor(folder=log_dir)
 
@@ -212,8 +229,8 @@ def submit_job(
         slurm_account=account,
         slurm_qos=qos,
         slurm_additional_parameters={
-            "chdir": working_dir,
-            "gres": f"gpu:{gpus_per_node}",  # Request GPUs
+            'chdir': working_dir,
+            'gres': f'gpu:{gpus_per_node}',  # Request GPUs
         },
     )
 
@@ -224,46 +241,46 @@ def submit_job(
             import subprocess
 
             def find_free_port():
-                """Find an available port on the system."""
+                '''Find an available port on the system.'''
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.bind(('', 0))  # Bind to any available port
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     return s.getsockname()[1]  # Return the port number
 
-            os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+            os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
 
             # Set up SLURM environment variables
-            master_addr = subprocess.getoutput("scontrol show hostname $SLURM_NODELIST | head -n 1").strip()
-            os.environ["MASTER_ADDR"] = master_addr
+            master_addr = subprocess.getoutput('scontrol show hostname $SLURM_NODELIST | head -n 1').strip()
+            os.environ['MASTER_ADDR'] = master_addr
 
             # Dynamically set the master port
             master_port = find_free_port()
-            os.environ["MASTER_PORT"] = str(master_port)
+            os.environ['MASTER_PORT'] = str(master_port)
 
-            os.environ["WORLD_SIZE"] = str(int(nodes * tasks_per_node))  # Total processes
-            os.environ["RANK"] = os.environ.get("SLURM_PROCID", "0")  # Rank assigned by SLURM
+            os.environ['WORLD_SIZE'] = str(int(nodes * tasks_per_node))  # Total processes
+            os.environ['RANK'] = os.environ.get('SLURM_PROCID', '0')  # Rank assigned by SLURM
 
             # Debugging logs for distributed setup
-            print(f"MASTER_ADDR: {os.environ['MASTER_ADDR']}")
-            print(f"MASTER_PORT: {os.environ['MASTER_PORT']}")
-            print(f"WORLD_SIZE: {os.environ['WORLD_SIZE']}")
-            print(f"RANK: {os.environ['RANK']}")
+            print(f'MASTER_ADDR: {os.environ['MASTER_ADDR']}')
+            print(f'MASTER_PORT: {os.environ['MASTER_PORT']}')
+            print(f'WORLD_SIZE: {os.environ['WORLD_SIZE']}')
+            print(f'RANK: {os.environ['RANK']}')
 
             if env_vars:
                 for k,v in env_vars.items():
                     os.environ[k] = str(v)
 
             # Only run the `torchrun` command on rank 0
-            rank = int(os.environ["RANK"])
+            rank = int(os.environ['RANK'])
             if rank == 0:
                 # Update the command to explicitly use the dynamic port
                 full_command = (
-                    f"torchrun --nproc_per_node={gpus_per_node} "
-                    f"--rdzv_endpoint={master_addr}:{master_port} "
-                    f"{command}"
+                    f'torchrun --nproc_per_node={gpus_per_node} '
+                    f'--rdzv_endpoint={master_addr}:{master_port} '
+                    f'{command}'
                 )
 
-                print(f"Running command: {full_command}")
+                print(f'Running command: {full_command}')
                 subprocess.run(full_command, shell=True, check=True)
     else:
         def job_function():
@@ -273,16 +290,85 @@ def submit_job(
                 for k,v in env_vars.items():
                     os.environ[k] = str(v)
 
-            print(f"Running command: {command}")
+            print(f'Running command: {command}')
             subprocess.run(command, shell=True, check=True)
 
 
     # Submit the job
     job = executor.submit(job_function)
 
-    print(f"Job submitted with ID: {job.job_id}, {job}")
+    print(f'Job submitted with ID: {job.job_id}, {job}')
     return job
 
+
+def simulate_local_submitit_job(
+    command: str,
+    working_dir: str,
+    log_dir: str,
+    env_vars: Optional[dict[str, str]] = None,
+) -> submitit.core.core.Job:
+    '''
+    Simulate execution of a submitit.Job instance.
+
+    Args:
+      command: The command string to run.
+      working_dir: The working directory for the subprocess.
+      log_dir: Dir where submitit writes logs
+    
+    Returns:
+      A mock Job object for the local CPU job.
+    '''
+    # Create unique folder for the local job and get unique hash
+    job_folder, job_id = fs_utils.create_unique_temp_folder(os.path.join(log_dir), 'job')
+    job = submitit.core.core.Job(folder=log_dir, job_id=job_id, tasks=(0,))
+
+    # folder should be set to submitit_log_dir
+    base = Path(job._paths.folder)
+    job_folder = base / "local" / job.job_id
+    job_folder.mkdir(parents=True, exist_ok=True)
+    
+    # Override job._paths with the expected attributes.
+    job._paths = SimpleNamespace(
+        folder=job_folder,
+        stdout=job_folder / "stdout",
+        stderr=job_folder / "stderr",
+        result_pickle=job_folder / "result.pkl",
+        submitted_pickle=job_folder / "submitted.pkl"
+    )
+    
+    job.watcher.get_state = lambda job_id, mode="standard": "RUNNING"
+
+    # Run the command in the provided working directory.
+    job_env = os.environ.copy()  # Start with a copy of the current environment
+    if env_vars:
+        job_env.update(env_vars)
+    with job._paths.stdout.open("w") as out_f, job._paths.stderr.open("w") as err_f:
+        process = subprocess.Popen(
+            command,
+            cwd=str(working_dir),
+            stdout=out_f,
+            stderr=err_f,
+            shell=True,  # command must be provided as a list
+            env=job_env
+        )
+        process.wait()
+        retcode = process.returncode
+
+    if retcode == 0:
+        # Command succeeded: write the result pickle.
+        outcome = "success"
+        result = "Job completed successfully."
+        with job._paths.result_pickle.open("wb") as f:
+            pickle.dump((outcome, result), f)
+        job.watcher.get_state = lambda job_id, mode="standard": "COMPLETED"
+    else:
+        # Command failed: ensure no result pickle exists.
+        if job._paths.result_pickle.exists():
+            job._paths.result_pickle.unlink()
+        # Patch the job's watcher so that done() returns True (job is finished as "FAILED").
+        job.watcher.get_state = lambda job_id, mode="standard": "FAILED"
+    
+    return job
 
 
 async def main():
@@ -291,14 +377,14 @@ async def main():
         log_err = job_result.log_err[0]
 
         metrics = {}
-        matches = re.findall(r"step:(\d+)(?:/\d+)?\s+val_loss:([\d.]+)\s+train_time:(\d+)ms", log_out)
+        matches = re.findall(r'step:(\d+)(?:/\d+)?\s+val_loss:([\d.]+)\s+train_time:(\d+)ms', log_out)
         if matches:
             # Take the last match
             last_match = matches[-1]
             metrics = {
-                "n_steps": int(last_match[0]),
-                "val_loss": float(last_match[1]),
-                "train_time": int(last_match[2])
+                'n_steps': int(last_match[0]),
+                'val_loss': float(last_match[1]),
+                'train_time': int(last_match[2])
             }
 
         print('Job completed')
