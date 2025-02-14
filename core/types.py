@@ -34,6 +34,7 @@ class SlurmConfig:
 	cpus_per_task: int
 	job_ttl: int
 	use_torchrun: bool = False
+	use_local_runs: bool = False
 	job_name: str = 'submitit'
 	account: str = 'maui'
 	qos: Optional[str] = None

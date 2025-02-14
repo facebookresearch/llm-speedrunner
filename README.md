@@ -14,6 +14,7 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [x] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
 - [x] Add ability to condition on prior knowledge when formulating hypotheses.
 - [x] Integrate MLE-Bench tasks via a script to automatically import individual tasks via their competition IDs.
+- [x] Add ability to run jobs locally on the same machine that is running the scientist (set `slurm_config_args.use_local_runs=True`.
 - [ ] Gracefully handle preemption and re-entry.
 - [ ] Add a basic web interface to explore a running or previous scientist run.
 
