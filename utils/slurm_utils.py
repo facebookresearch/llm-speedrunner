@@ -24,7 +24,7 @@ class JobStatus(Enum):
 
 @dataclasses.dataclass
 class JobResult:
-    '''Aggregate information about the finished job.'''
+    """Aggregate information about the finished job."""
     job_id: str
     metadata: dict[str, str | int | float, bool]
     status: JobStatus
@@ -35,12 +35,13 @@ class JobResult:
 
 
 class JobObserver:
-    '''Manages a pool of asyncio tasks for observing submitit job status.'''
+    """Manages a pool of asyncio tasks for observing submitit job status."""
     shared = None  # Singleton
 
     def __init__(self):
         # We keep a list of tasks created by 'observe'
         self._observing_tasks: list[asyncio.Task] = []
+        self._observed_jobs: dict[str, submitit.Job] = {}
 
     def observe(
         self,
@@ -50,7 +51,7 @@ class JobObserver:
         focus_rank: Optional[int] = None,
         poll_interval: int = 10,
     ) -> None:
-        '''
+        """
         Observe the status of a submitit job, and execute a callback when finished.
 
         Args:
@@ -59,7 +60,7 @@ class JobObserver:
             callback (Callable[[JobResult], None]): Called after job finishes with the JobResult.
             focus_rank (Optional[int]): If set, only fetch logs from that subtask index.
             poll_interval (int): How often (seconds) to poll the job status.
-        '''
+        """
         task = asyncio.create_task(
             self._observe_job(
                 job=job,
@@ -70,11 +71,7 @@ class JobObserver:
             )
         )
         self._observing_tasks.append(task)
-
-    async def wait(self) -> None:
-        '''Returns only when all observed jobs and their callbacks are complete.'''
-        if self._observing_tasks:
-            await asyncio.gather(*self._observing_tasks)
+        self._observed_jobs[job.job_id] = job
 
     async def _observe_job(
         self,
@@ -84,10 +81,10 @@ class JobObserver:
         callback: Optional[Callable[[JobResult], None]] = None,
         metadata: Optional[dict[str, str | int | float, bool]] = None,
     ) -> None:
-        '''
+        """
         Loop that periodically checks the job until it's done,
         then calls the user-specified callback with a JobResult.
-        '''
+        """
         while not job.done():
             print('polling job', job, job.done(), job.state.upper(), flush=True)
             await asyncio.sleep(poll_interval)
@@ -109,17 +106,32 @@ class JobObserver:
             log_err=log_err,
         )
 
+        if job.job_id in self._observed_jobs:
+            del self._observed_jobs[job.job_id]
+
         if callback is not None:
             callback(result)
+
+    async def wait(self) -> None:
+        """Returns only when all observed jobs and their callbacks are complete."""
+        if self._observing_tasks:
+            await asyncio.gather(*self._observing_tasks)
+
+    def cancel(self) -> None:
+        """Cancel all pending jobs."""
+        if len(self._observed_jobs) > 0:
+            for _, job in self._observed_jobs.items():
+                if job._cancel_command != 'dummy':
+                    job.cancel()
 
     def _map_slurm_state_to_job_status(
         self,
         slurm_state: str,
         job: submitit.Job
     ) -> JobStatus:
-        '''
+        """
         Convert a Slurm or Submitit job state to simpler JobStatus states
-        '''
+        """
         if slurm_state == 'COMPLETED':
             return JobStatus.COMPLETED
 
@@ -142,12 +154,12 @@ class JobObserver:
         job: submitit.Job,
         focus_rank: Optional[int]
     ) -> Tuple[list[str], list[str]]:
-        '''
+        """
         Gathers job stdout/stderr logs as lists of strings.
 
         If focus_rank is given, only logs for that subtask index.
         Otherwise, all tasks in an array job (or the single task in a normal job).
-        '''
+        """
         # If a particular rank is requested, only retrieve logs from that subtask
         if focus_rank is not None:
             subjob = job.task(focus_rank)
@@ -188,7 +200,7 @@ def submit_job(
     use_torchrun=False,
     use_local_runs=False,
 ):
-    '''
+    """
     Launches a SLURM job using submitit with the specified arguments.
 
     Args:
@@ -204,7 +216,7 @@ def submit_job(
 
     Returns:
         str: Job ID of the submitted SLURM job.
-    '''
+    """
     # Local runs
     if use_local_runs:
         # Simulate job and return it
@@ -241,7 +253,7 @@ def submit_job(
             import subprocess
 
             def find_free_port():
-                '''Find an available port on the system.'''
+                """Find an available port on the system."""
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.bind(('', 0))  # Bind to any available port
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -306,8 +318,8 @@ def simulate_local_submitit_job(
     working_dir: str,
     log_dir: str,
     env_vars: Optional[dict[str, str]] = None,
-) -> submitit.core.core.Job:
-    '''
+) -> submitit.Job:
+    """
     Simulate execution of a submitit.Job instance.
 
     Args:
@@ -317,10 +329,10 @@ def simulate_local_submitit_job(
     
     Returns:
       A mock Job object for the local CPU job.
-    '''
+    """
     # Create unique folder for the local job and get unique hash
     job_folder, job_id = fs_utils.create_unique_temp_folder(os.path.join(log_dir), 'job')
-    job = submitit.core.core.Job(folder=log_dir, job_id=job_id, tasks=(0,))
+    job = submitit.Job(folder=log_dir, job_id=job_id, tasks=(0,))
 
     # folder should be set to submitit_log_dir
     base = Path(job._paths.folder)

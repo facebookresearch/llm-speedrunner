@@ -256,7 +256,6 @@ class TestNewWorkspace:
         assert self.workspace.version_infos[buggy_version_two].stable_ancestor_version == stable_version
 
 
-# @todo: Test workpace view history
 class TestWorkspaceViewHistory:
     """
     A test class that shares a single Workspace instance across all methods.
@@ -278,9 +277,9 @@ class TestWorkspaceViewHistory:
         # Set up history
         #
         # [v_1]
-        #  |
+        #   |
         # [v_2]--bug--[v_4]--bug--[v_5]--bug--[v_6]--[v_7]
-        #  |
+        #   |
         # [v_3]
         #
         self.workspace.create_version(from_version='1')  # v_2
@@ -394,3 +393,68 @@ class TestWorkspaceViewHistory:
         infos = self.workspace.get_good_versions()
         assert len(infos) == 5
         assert set([info.version for info in infos]) == {'1', '2', '3', '7', '0'}
+
+
+class TestWorkspaceDeleteVersions:
+    """
+    A test class that shares a single Workspace instance across all methods.
+    """
+    @pytest.fixture(autouse=True, scope="class")
+    def _setup_class(self, workspace_factory):
+        template_contents = {
+            "test.txt": "These are the droids you are looking for.",
+            "data/test_data.csv": "name,role\nnikola tesla,scientist\n"
+        }
+        type(self).template_contents = template_contents
+
+        (
+            type(self).workspace, 
+            type(self).root_path, 
+            type(self).template_dir
+        ) = workspace_factory(template_contents)
+
+        # Event history:
+        #
+        # [v_1]
+        #   |
+        # [v_2] - No result, later delete
+        #   |
+        # [v_3]
+        #   |
+        # [v_4]
+        #
+        self.workspace.create_version(from_version='1')  # v_2
+        self.workspace.create_version(from_version='2')  # v_3
+        self.workspace.create_version(from_version='3')  # v_4
+
+        self.workspace.save_to_file(
+            json.dumps(dict(status='COMPLETED')), 'results.json', version='1'
+        )
+        self.workspace.save_to_file(
+            json.dumps(dict(status='COMPLETED')), 'results.json', version='2'
+        )
+
+    def test_get_completed_versions(self):
+        infos = self.workspace.get_completed_versions()
+        assert len(infos) == 2
+        assert set([info.version for info in infos]) == {'1', '2'}
+
+    def test_delete_version(self):
+        self.workspace.delete_version(version='3')
+
+        assert len(self.workspace.version_infos) == 3
+
+        infos = self.workspace.get_completed_versions()
+        assert len(infos) == 2
+        assert set([info.version for info in infos]) == {'1', '2'}
+
+        assert self.workspace.n_versions == 3
+        assert self.workspace.max_version == 2
+
+        try:
+            assert self.workspace.version_infos['2'].children == []
+        except:
+            import pdb; pdb.set_trace()
+            
+
+

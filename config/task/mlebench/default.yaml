@@ -51,13 +51,6 @@ exp_config_args:
   selection_metric: score
   lower_is_better: false
 
-
-workspace_args:
-  ignore_list:
-    - "*grading_report.json"
-    - "submission.csv"
-
-
 slurm_config_args:
   _target_: core.types.SlurmConfig
 

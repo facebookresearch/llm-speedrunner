@@ -15,7 +15,7 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [x] Add ability to condition on prior knowledge when formulating hypotheses.
 - [x] Integrate MLE-Bench tasks via a script to automatically import individual tasks via their competition IDs.
 - [x] Add ability to run jobs locally on the same machine that is running the scientist (set `slurm_config_args.use_local_runs=True`.
-- [ ] Gracefully handle preemption and re-entry.
+- [x] Gracefully handle preemption and re-entry.
 - [ ] Add a basic web interface to explore a running or previous scientist run.
 
 ## Run examples
@@ -76,7 +76,8 @@ You can use the script `make_mlebench_task.py` to automatically generate a scien
 ```bash
 python make_mlebench_task.py \
 --task_id=random-acts-of-pizza \
---cache_dir_path=/path/for/storing/kaggle/datasets
+--cache_dir_path=/path/for/storing/kaggle/datasets \
+--lower_is_better
 ```
 
 The first time you run this command for a new MLE-Bench task, you will be asked to visit the competition page in your browser to accept the competition rules.

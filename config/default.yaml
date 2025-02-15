@@ -55,6 +55,8 @@ workspace_args:
     - results.json
     - cache
     - preview_resources.txt
+    - "*grading_report.json" 
+    - "submission.csv"
 
 assistant_args:
   _target_: core.agent.Agent

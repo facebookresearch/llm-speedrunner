@@ -83,6 +83,10 @@ class Workspace:
 
         # Load version infos into memory
         self.version_infos = {info.version: info for info in self.load_version_info()}
+        if self.version_infos:
+            self.max_version = max([int(version) for version in self.version_infos])
+        else:
+            self.max_version = None
 
         if self.n_versions == 0:
             self.create_version(from_path=template_dir, ignore_list=[])
@@ -182,9 +186,14 @@ class Workspace:
         ignore_list: Optional[str] = None
     ) -> int:
         """Create new version directory, copying all contents in from_path."""
-        new_version = str(self.n_versions)
-        new_version_dir_path = self.resolve_path(version=new_version)
+        # new_version = str(self.n_versions)
         self.n_versions += 1
+        if self.max_version is None:
+            self.max_version = 0
+        else:
+            self.max_version += 1
+        new_version = str(self.max_version)
+        new_version_dir_path = self.resolve_path(version=new_version)
 
         os.makedirs(new_version_dir_path, exist_ok=True)
 
@@ -230,6 +239,35 @@ class Workspace:
         self.version_infos[new_version] = self.load_version_info(version=new_version)
 
         return new_version
+
+    def delete_version(self, version: str):
+        """Delete a version and all its children."""
+        assert version != '0', 'Cannot delete root version.'
+
+        children = []
+        if version in self.version_infos:
+            children = self.version_infos[version].children
+            parent_version = self.version_infos[version].parent_version
+            del self.version_infos[version]
+            self.max_version = max([int(version) for version in self.version_infos])
+
+        version_path = self.resolve_path(version=version)
+        if os.path.exists(version_path):
+            shutil.rmtree(version_path)
+            self.n_versions -= 1
+
+        # Update parent's child pointer
+        parent_meta_path = self.resolve_path('meta.json', version=parent_version)
+        if os.path.exists(parent_meta_path):
+            with open(parent_meta_path, 'r') as f:
+                metadata = json.load(f)
+            metadata['children'] = [x for x in metadata['children'] if x != version]
+            self.save_to_file(json.dumps(metadata), 'meta.json', version=parent_version)
+            self.version_infos[parent_version] = self.load_version_info(version=parent_version)
+
+        if children:
+            for child_version in children:
+                self.delete_version(child_version)
 
     def mark_as_buggy_from_version(self, version: str, from_version: Optional[str] = None):
         if from_version:
@@ -407,6 +445,14 @@ class Workspace:
     def get_good_versions(self) -> list[VersionInfo]:
         """Return all versions that are not buggy."""
         return [info for _, info in self.version_infos.items() if info.bug_depth == 0]
+
+    def get_pending_versions(self) -> list[VersionInfo]:
+        """Return all versions without results yet."""
+        return [info for _, info in self.version_infos.items() if not info.results]
+
+    def get_completed_versions(self) -> list[VersionInfo]:
+        """Return all versions with results."""
+        return [info for _, info in self.version_infos.items() if info.results]
 
     def view_history(
         self,

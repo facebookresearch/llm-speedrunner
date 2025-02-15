@@ -116,10 +116,22 @@ def main():
     	)
 
     # Copy base files into task-specific workspace template
-    fs_utils.cp_dir(os.path.join(workspace_template_dir_path, 'base'), task_template_path)
+    base_template_path = os.path.join(workspace_template_dir_path, 'base')
+    fs_utils.cp_dir(base_template_path, task_template_path)
+
+    # Set proper default score for initial empty solution
+    results_path = os.path.join(base_template_path, 'results.json')
+    with open(results_path) as f:
+        results_dict = json.load(f)
+    if args.lower_is_better:
+        results_dict['metrics']['score'] = float('inf')
+    else:
+        results_dict['metrics']['score'] = float('-inf')
+    with open(results_path, 'w') as f:
+        json.dump(results_dict, f, indent=4)
 
     src_description = get_mlebench_file_path(args.task_id, cache_dir_path, 'description.md')
-    src_sample = get_mlebench_file_path(args.task_id, cache_dir_path, 'sampleSubmission.csv')
+    # src_sample = get_mlebench_file_path(args.task_id, cache_dir_path, 'sampleSubmission.csv')
     
     dst_description_path = os.path.join(task_template_path, 'description.md')
     # dst_sample_path = os.path.join(task_template_path, 'sampleSubmission.csv')

@@ -81,6 +81,7 @@ class ScienceRunner:
         job_results: slurm_utils.JobResult,
         eval_job_results: Optional[slurm_utils.JobResult] = None
     ):  
+        version_info = self.workspace.version_infos[version]
         log_out = job_results.log_out[0][-self.max_log_len:]
         log_err = job_results.log_err[0][-self.max_log_len:]
         outcome_summary = self.assistant.act(
@@ -91,7 +92,7 @@ class ScienceRunner:
             ),
             max_retries=self.max_retries
         )
-        print(f'outcome_summary:\n{outcome_summary}')
+        print(f'OUTCOME SUMMARY:\n{outcome_summary}')
 
         eval_log_out = log_out
         if eval_job_results is not None:
@@ -112,7 +113,10 @@ class ScienceRunner:
         # If no regex match on results
         if not metrics:
             summary = json.loads(
-                self.workspace.view('results.json', version=version, no_filename_headers=True).strip()
+                self.workspace.view(
+                    'results.json', 
+                    version=version_info.parent_version,
+                    no_filename_headers=True).strip()
             )
             metric_types = {k: Union[type(v), None] for k, v in summary.get('metrics', {}).items()}
             metric_types_str = json.dumps({k: type(v).__name__ for k, v in summary.get('metrics', {}).items()})
@@ -147,7 +151,6 @@ class ScienceRunner:
             metrics['is_valid'] = False
 
         # Update meta based on whether job failed or failed to produce usable metrics
-        version_info = self.workspace.version_infos[version]
         if not metrics['is_valid'] or job_results.status == slurm_utils.JobStatus.FAILED:  # Update meta
             self.workspace.mark_as_buggy_from_version(
                 version=version, 
@@ -162,9 +165,16 @@ class ScienceRunner:
             'outcome_summary': outcome_summary
         }
 
-        self.workspace.save_to_file(json.dumps(job_results), 'results.json', version=version)
-
+        self.workspace.save_to_file(
+            json.dumps(job_results, indent=4), 'results.json', version=version
+        )
 
     async def run(self, n_iterations=1):
         raise NotImplementedError()
+
+    def shutdown(self):
+        slurm_utils.JobObserver.shared.cancel()
+        pending_version_infos = self.workspace.get_pending_versions()
+        for info in pending_version_infos:
+            self.workspace.delete_version(info.version)
 

@@ -115,7 +115,7 @@ class AiderCoder(Agent):
             packages=workspace.packages,
             bug_history=bug_history
         )
-
+        
         coder_out = self._coder.run(code_prompt)
 
         if self._coder.summarizer_thread:
