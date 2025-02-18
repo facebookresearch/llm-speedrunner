@@ -9,11 +9,6 @@ exp_config_args:
 
   max_retries: 3
 
-  preamble: >-
-    Your goal is to improve the model architecture and other training logic in main.py,
-    so that running exactly `python main.py` results in the highest possible
-    test accuracy after 10 epochs.
-
   task_description: >-
     Implement main.py so that running it as `python main.py` produces the
     lowest test_loss possible after 10 epochs of training.

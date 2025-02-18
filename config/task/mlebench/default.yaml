@@ -7,10 +7,15 @@ exp_config_args:
 
   max_retries: 3
 
-  preamble: >-
-    You are a Kaggle grandmaster competing in a competition.
-
   task_description_file: description.md
+
+  task_description: >-
+    You are a Kaggle grandmaster.
+
+    Your solution to this Kaggle challenge should achieve the highest medal possible,
+    where the medal rankings from best to worst are gold, silver, and bronze. 
+
+    Your solution is not good enough if it does not medal.
 
   code_instructions: >-
     Write a single file called solution.py that does the following:\n

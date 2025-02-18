@@ -42,7 +42,12 @@ class ScienceRunner:
 
             if os.path.exists(task_description_path):
                 with open(task_description_path, 'r') as f:
-                    task_description = f.read().strip()
+                    task_description_loaded = f.read().strip()
+                    if task_description:
+                        task_description = task_description_loaded + '\n\n' + task_description
+                    else:
+                        task_description = task_description_loaded
+
         assert task_description, 'Must provide a valid task description.'
         self.task_description = task_description
 

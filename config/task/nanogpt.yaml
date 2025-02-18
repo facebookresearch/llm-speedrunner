@@ -9,11 +9,6 @@ exp_config_args:
 
   max_retries: 3
 
-  preamble: >-
-    Your goal is to improve the training logic in train_gpt.py to achieve the
-    lowest possible validation loss on the FineWeb dataset in the shortest amount
-    of time possible.
-
   task_description: >-
     Improve train_gpt.py so that it achieves or goes below the
     target val_loss value of 3.28 in the shortest train_time possible.

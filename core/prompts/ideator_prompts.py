@@ -11,12 +11,15 @@ In the summary, the "hypothesis" value refers to the original hypothesis motivat
 {summary}
 
 First, summarize at a high level what the current implementation does.
-Then, come up with a new hypothesis for how you can improve the code to achieve the following task:
+Then, come up with a new hypothesis for how you can improve the code to do as well as possible in the following task:
 
 # Task description
 {instruction}
 
-Be methodical and scientific in suggesting changes. Avoid suggesting too many conceptual changes to the code at once, though some individual ideas may require more lines of code change, which is okay. Remember: Quality over quantity.
+# Idea guidelines
+- Your idea will be handed to an expert ML engineer to implement. You must therefore be conceptually precise and ideally provide a concrete and detailed design of the implementation.
+- The engineer only has 1 minute to your idea and design spec, so be mindful to keep these descriptions as concise as possible.
+- Your goal is to achieve the state-of-art in the task described. Be ambitious in ideation, so long as the solution adheres to any task constraints specified above.
 """
 
 

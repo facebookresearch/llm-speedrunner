@@ -9,9 +9,6 @@ exp_config_args:
 
   max_retries: 3
 
-  preamble: >-
-    You are an expert at game theory and coding.
-
   task_description: >-
     You are going to play a classic from game theory called Battle of the
     Sexes. In this game there are two strategies, 0 and 1. You are the row player, and

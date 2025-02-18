@@ -7,7 +7,6 @@ Serializable = Union[str, int, float, bool, None, dict[str, "Serializable"], lis
 
 @dataclasses.dataclass
 class ExperimentConfig:
-	preamble: str
 	code_instructions: str
 
 	entry_fname: str
@@ -24,6 +23,7 @@ class ExperimentConfig:
 
 	task_description: Optional[str] = None
 	task_description_file: Optional[str] = None
+	preamble: Optional[str] = None
 
 
 @dataclasses.dataclass
