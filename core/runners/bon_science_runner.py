@@ -91,7 +91,7 @@ class BoNScienceRunner(ScienceRunner):
             incl_buggy_versions=True,
             incl_ancestors=False,
             incl_descendents=True,
-            descendent_depth=1,
+            descendent_depth=3,
             as_string=True
         )
 
@@ -189,10 +189,10 @@ class BoNScienceRunner(ScienceRunner):
         # Offset iteration and hypotheses indexing if we are re-entering
         # a preempted run.
         completed_version_infos = self.workspace.get_completed_versions()
-        start_iter_idx = len(completed_version_infos) - 1
+        start_iter_idx = len(completed_version_infos)
 
         if start_iter_idx < self.n_initial_hypotheses:
-            n_initial_hypotheses = self.n_initial_hypotheses - start_iter_idx
+            n_initial_hypotheses = self.n_initial_hypotheses - start_iter_idx + 1
             start_iter_idx = 0
 
         # Get starting open version (None defaults to template)
@@ -242,7 +242,7 @@ class BoNScienceRunner(ScienceRunner):
                         task_description=self.task_description,
                         fnames=self.fnames,
                         workspace=self.workspace,
-                        version='1' if not open_version else open_version,
+                        version='0' if not open_version else open_version,
                         ignore_ideas=hypotheses,  # Avoid duplicating previous ideas
                         history=relevant_history,
                         knowledge=self.knowledge.search(as_string=True),
@@ -260,10 +260,7 @@ class BoNScienceRunner(ScienceRunner):
                 print(f'Hypothesis:\n{hypothesis}')
 
                 # Create a new workspace version for each experiment
-                if i == 0 and hyp_idx == 0:
-                    # Use initial workspace for first hypothesis
-                    version = '1'
-                elif i == 0:
+                if i == 0:
                     # All first generation hypotheses branch from template
                     version = self.workspace.create_version(from_version='0')
                 else:
@@ -280,6 +277,7 @@ class BoNScienceRunner(ScienceRunner):
 
                 # Schedule experiments for all hypotheses
                 version_info = self.workspace.get_version_info(version)
+
                 await self._run_exp(
                     version_info=version_info,
                     metadata=version2metadata[version]

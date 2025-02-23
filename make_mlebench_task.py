@@ -120,7 +120,7 @@ def main():
     fs_utils.cp_dir(base_template_path, task_template_path)
 
     # Set proper default score for initial empty solution
-    results_path = os.path.join(base_template_path, 'results.json')
+    results_path = os.path.join(task_template_path, 'results.json')
     with open(results_path) as f:
         results_dict = json.load(f)
     if args.lower_is_better:

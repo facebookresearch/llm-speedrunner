@@ -18,7 +18,7 @@ Then, come up with a new hypothesis for how you can improve the code to do as we
 
 # Idea guidelines
 - Your idea will be handed to an expert ML engineer to implement. You must therefore be conceptually precise and ideally provide a concrete and detailed design of the implementation.
-- The engineer only has 1 minute to your idea and design spec, so be mindful to keep these descriptions as concise as possible.
+- The engineer only has 1 minute to read your idea and design spec, so be mindful to keep these descriptions as concise as possible.
 - Your goal is to achieve the state-of-art in the task described. Be ambitious in ideation, so long as the solution adheres to any task constraints specified above.
 """
 

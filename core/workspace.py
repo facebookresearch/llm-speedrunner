@@ -90,7 +90,6 @@ class Workspace:
 
         if self.n_versions == 0:
             self.create_version(from_path=template_dir, ignore_list=[])
-            self.create_version(from_version='0')
 
     def _get_version_dirs(self) -> list[str]:
         version_dirs = []
@@ -150,13 +149,24 @@ class Workspace:
                 meta = {}
 
             parent_version = meta.get('parent', None)
+            try:
+                parent_meta = json.loads(
+                        self.view('meta.json',
+                        version=parent_version,
+                        no_filename_headers=True
+                    ).strip()
+                )
+            except:
+                parent_meta = {}
+            parent_stable_ancestor_version = parent_meta.get('stable_ancestor_version', '0')
+
             infos.append(VersionInfo(
                     version=version,
                     results=results,
                     bug_depth=meta.get('bug_depth', 0),
                     parent_version=parent_version,
                     children=meta.get('children', None),
-                    stable_ancestor_version=meta.get('stable_ancestor_version', parent_version)
+                    stable_ancestor_version=meta.get('stable_ancestor_version', parent_stable_ancestor_version)
                 )
             )
 

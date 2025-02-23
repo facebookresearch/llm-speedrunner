@@ -545,7 +545,6 @@ if __name__ == '__main__':
     keys = [
         'gold_medal'
     ]
-
         
     if args.plot_type == 'success_rate':
         # Get summary info (one row per distinct experiment_id, competition_id pair)

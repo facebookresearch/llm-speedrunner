@@ -96,17 +96,13 @@ class TestNewWorkspace:
         assert os.path.isdir(version_path), "v_0 path is a directory."
 
         version_path = self.workspace.resolve_path(version='1')
-        assert os.path.exists(version_path), "v_1 path exists."
-        assert os.path.isdir(version_path), "v_1 path is a directory."
-
-        version_path = self.workspace.resolve_path(version='2')
-        assert not os.path.exists(version_path), "v_2 does not path exist."
+        assert not os.path.exists(version_path), "v_1 does not path exist."
 
     def test_initial_n_versions(self):
-        assert self.workspace.n_versions == 2  # v_0 and v_1
+        assert self.workspace.n_versions == 1  # v_0 only
 
     def test_copy_from_template_dir(self):
-        file_contents = {self.workspace.resolve_path(k, version='1'): v for k, v in self.template_contents.items()}
+        file_contents = {self.workspace.resolve_path(k, version='0'): v for k, v in self.template_contents.items()}
         check_files_with_contents_exist(file_contents)
 
     def test_save_to_file_to_root(self):
@@ -282,6 +278,7 @@ class TestWorkspaceViewHistory:
         #   |
         # [v_3]
         #
+        self.workspace.create_version(from_version='0')  # v_1
         self.workspace.create_version(from_version='1')  # v_2
         self.workspace.create_version(from_version='2')  # v_3
 
@@ -423,6 +420,7 @@ class TestWorkspaceDeleteVersions:
         #   |
         # [v_4]
         #
+        self.workspace.create_version(from_version='0')  # v_1
         self.workspace.create_version(from_version='1')  # v_2
         self.workspace.create_version(from_version='2')  # v_3
         self.workspace.create_version(from_version='3')  # v_4

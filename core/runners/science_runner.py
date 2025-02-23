@@ -138,7 +138,10 @@ class ScienceRunner:
             print(f'metrics_response:\n{metrics_response}')
             if metrics_response:
                 metrics = json.loads(metrics_response)
-                metrics['is_valid'] = True
+                if not any([v is None for _, v in metrics.items()]):
+                    metrics['is_valid'] = True
+                else:
+                    metrics['is_valid'] = False
 
         # Reject if any metrics go below a floor threshold
         if self.metrics_at_least and (any(metrics.get(key) or float('inf')) < threshold 
