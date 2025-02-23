@@ -16,6 +16,7 @@ import json
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import rcParams
 from matplotlib.ticker import MaxNLocator
 
@@ -118,12 +119,17 @@ def main():
                         help="Value by which to rescale the y-values")
     parser.add_argument('--ythreshold', type=float, default=None,
                         help="Plot y-threshold value here")
+    parser.add_argument('--ignore_threshold', type=float, default=None,
+                        help="Remove datapoints that equal this on the y-axis.")
     parser.add_argument('--save_name', type=str, default=None,
                         help="Save to figures/<save_name>. Should include the file extension, e.g. .pdf")
     args = parser.parse_args()
 
     # Gather data into DataFrame
     df = gather_metrics(args.workspace_path, [args.metric], args.workspace_template_path)
+
+    if args.ignore_threshold is not None:
+        df.loc[df[args.metric] > args.ignore_threshold, args.metric] = np.nan
 
     if df.empty:
         print("No data found for the specified metric.")

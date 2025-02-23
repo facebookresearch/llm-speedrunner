@@ -26,7 +26,7 @@ def get_aider_model_name(model_name: str) -> str:
     return name
 
 
-def set_env_vars_fo_model(model_name: str, model_url: Optional[str] = None):
+def set_env_vars_for_model(model_name: str, model_url: Optional[str] = None):
     if model_name in ['o1-preview', 'gpt-4o']:
         os.environ['AZURE_API_BASE'] = model_url
         os.environ['AZURE_API_VERSION'] = '2024-10-21'
@@ -59,7 +59,7 @@ class AiderCoder(Agent):
             chat_history_file = 'aider.txt'
         io = InputOutput(yes=True, chat_history_file=chat_history_file)
 
-        set_env_vars_fo_model(model_name, model_url)
+        set_env_vars_for_model(model_name, model_url)
             
         aider_model_name = get_aider_model_name(model_name)
         main_model = Model(aider_model_name)

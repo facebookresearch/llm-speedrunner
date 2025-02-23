@@ -44,6 +44,8 @@ workspace_args:
     - torchvision
     - torch-geometric
     - timm
+    - huggingface_hub
+    - transformers
     - cudatoolkit
 
   ignore_list:
