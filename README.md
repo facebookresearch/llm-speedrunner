@@ -18,6 +18,26 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 - [x] Gracefully handle preemption and re-entry.
 - [ ] Add a basic web interface to explore a running or previous scientist run.
 
+## Setup
+
+There are two ways to setup the code.
+
+### Clone @minqi's existing conda environment
+
+```
+conda create --name mle-bench-minqi --clone /home/minqijiang/miniconda3/envs/mle-bench
+```
+
+While cloning an existing conda environment is not generally the recommended approach, in this case, we recommend doing this while we figure out the version conflicts when installing different packages.
+
+### Create a new conda environment
+
+```
+conda env create -f environment.yaml
+```
+
+This approach is typically the recommended approach but in this case, we recommend not using this while we figure out the version conflicts when installing different packages.
+
 ## Run examples
 
 #### r1
