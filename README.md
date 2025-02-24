@@ -20,9 +20,11 @@ In the current framework, an LLM-based scientist agent (or team of such agents) 
 
 ## Setup
 
-There are two ways to setup the code.
+### Conda Environment
 
-### Clone @minqi's existing conda environment
+There are two ways to setup the conda environment
+
+#### Clone @minqi's existing conda environment
 
 ```
 conda create --name mle-bench-minqi --clone /home/minqijiang/miniconda3/envs/mle-bench
@@ -30,7 +32,7 @@ conda create --name mle-bench-minqi --clone /home/minqijiang/miniconda3/envs/mle
 
 While cloning an existing conda environment is not generally the recommended approach, in this case, we recommend doing this while we figure out the version conflicts when installing different packages.
 
-### Create a new conda environment
+#### Create a new conda environment
 
 ```
 conda env create -f environment.yaml
@@ -38,11 +40,11 @@ conda env create -f environment.yaml
 
 This approach is typically the recommended approach but in this case, we recommend not using this while we figure out the version conflicts when installing different packages.
 
-## Run examples
-
 ### Setup API keys
 
 Copy `config/secrets/default.template.yaml` to `config/secrets/default.yaml` and add API keys to it. Ping @minqi or @shagunsodhani for the keys. Note that `config/secrets/` is added to `.gitigore` (with the exception of `config/secrets/default.template.yaml`) to avoid accidentally pushing the keys to github.
+
+## Run examples
 
 #### r1
 First, spin up an instance of `r1-32b`:
