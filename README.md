@@ -40,6 +40,10 @@ This approach is typically the recommended approach but in this case, we recomme
 
 ## Run examples
 
+### Setup API keys
+
+Copy `config/secrets/default.template.yaml` to `config/secrets/default.yaml` and add API keys to it. Ping @minqi or @shagunsodhani for the keys. Note that `config/secrets/` is added to `.gitigore` (with the exception of `config/secrets/default.template.yaml`) to avoid accidentally pushing the keys to github.
+
 #### r1
 First, spin up an instance of `r1-32b`:
 

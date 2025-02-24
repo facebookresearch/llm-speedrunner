@@ -19,7 +19,12 @@ venv/
 
 # Hydra
 outputs/
-config/secrets/
+
+# Ignore all files in the config/secrets directory
+config/secrets/*
+
+# Unignore the default.template.yaml file
+!config/secrets/default.template.yaml
 
 # Workspaces
 workspaces/
