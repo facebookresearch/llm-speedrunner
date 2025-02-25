@@ -33,6 +33,9 @@ cache/
 # Figures
 figures/
 
+# Local results
+results/
+
 # Aider
 aider.txt
 
