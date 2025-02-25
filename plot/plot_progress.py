@@ -5,7 +5,9 @@ python plot/plot_progress.py \
 --workspace_template_path=workspace_templates/collatz \
 --workspace_path=workspaces/collatz_test2 \
 --metric=max_steps \
---ylabel='Max Collatz sequence length'
+--ylabel='Max Collatz sequence length' \
+--save_name=collatz_max_steps.pdf
+
 """
 from typing import Optional
 
@@ -21,7 +23,6 @@ from matplotlib import rcParams
 from matplotlib.ticker import MaxNLocator
 
 
-rcParams['font.family'] = 'Arial'
 rcParams['font.size'] = 14
 rcParams['figure.figsize'] = [12, 6]
 
