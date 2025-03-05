@@ -331,13 +331,13 @@ def simulate_local_submitit_job(
       A mock Job object for the local CPU job.
     """
     # Create unique folder for the local job and get unique hash
-    job_folder, job_id = fs_utils.create_unique_temp_folder(os.path.join(log_dir), 'job')
+    job_folder, job_id = fs_utils.create_unique_temp_folder(os.path.join(log_dir, 'local'), 'job')
     job = submitit.Job(folder=log_dir, job_id=job_id, tasks=(0,))
 
     # folder should be set to submitit_log_dir
-    base = Path(job._paths.folder)
-    job_folder = base / "local" / job.job_id
-    job_folder.mkdir(parents=True, exist_ok=True)
+    # base = Path(job._paths.folder)
+    # job_folder = base / "local" / job.job_id
+    # job_folder.mkdir(parents=True, exist_ok=True)
     
     # Override job._paths with the expected attributes.
     job._paths = SimpleNamespace(

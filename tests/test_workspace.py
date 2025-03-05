@@ -448,11 +448,8 @@ class TestWorkspaceDeleteVersions:
 
         assert self.workspace.n_versions == 3
         assert self.workspace.max_version == 2
+        assert self.workspace.version_infos['2'].children == []
 
-        try:
-            assert self.workspace.version_infos['2'].children == []
-        except:
-            import pdb; pdb.set_trace()
             
 
 

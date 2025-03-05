@@ -17,13 +17,19 @@ class ExperimentConfig:
 	metric_types: Optional[dict[str, list[type]]] = None
 	metrics_at_least: Optional[dict[str, int | float]] = None
 	metrics_at_most: Optional[dict[str, int | float]] = None
-	max_retries: int = 3
 
 	eval_fname: Optional[str] = None
+	eval_metric_types: Optional[dict[str, list[type]]] = None
+	eval_selection_metric: Optional[str] = None
+	eval_lower_is_better: bool = False
+	eval_metrics_at_least: Optional[dict[str, int | float]] = None
+	eval_metrics_at_most: Optional[dict[str, int | float]] = None
+	eval_metrics_private: Optional[list[str]] = None
 
 	task_description: Optional[str] = None
 	task_description_file: Optional[str] = None
 	preamble: Optional[str] = None
+	max_retries: int = 3
 
 
 @dataclasses.dataclass

@@ -86,5 +86,23 @@ def extract_best_line_metrics(
     if best_metrics is None:
         best_metrics = {}
 
+    if not best_metrics and not metric_types:
+        best_metrics['is_valid'] = True
+
     return best_metrics
 
+
+def extract_last_line_metrics(
+    text: str,
+    metric_types: dict[str, type],
+):
+    metrics = {}
+    for line in text.splitlines():
+        line_metrics = extract_single_line_metrics(line, metric_types)
+        if line_metrics:
+            metrics = line_metrics
+
+    if metrics or not metric_types:
+        metrics['is_valid'] = True
+
+    return metrics

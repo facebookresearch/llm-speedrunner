@@ -69,6 +69,20 @@ class ScienceRunner:
         }
         self.metrics_at_least = config.metrics_at_least
         self.metrics_at_most = config.metrics_at_most
+
+        if config.eval_metric_types:
+            self.eval_metric_types = {
+                k: str_utils.basic_type_name_to_type(v) 
+                for k,v in config.eval_metric_types.items()
+            }
+        else:
+            self.eval_metric_types = None
+        self.eval_selection_metric = config.eval_selection_metric
+        self.eval_lower_is_better = config.eval_lower_is_better
+        self.eval_metrics_at_least = config.eval_metrics_at_least
+        self.eval_metrics_at_most = config.eval_metrics_at_most
+        self.eval_metrics_private = config.eval_metrics_private or []
+
         self.max_retries = max_retries
         self.max_log_len = max_log_len
 
@@ -80,51 +94,47 @@ class ScienceRunner:
     def get_instruction(self, instruction: str) -> str:
         return '\n'.join([self.preamble, instruction])
 
-    def set_results_for_version(
+    def extract_metrics(
         self,
         version: str,
-        job_results: slurm_utils.JobResult,
-        eval_job_results: Optional[slurm_utils.JobResult] = None
-    ):  
+        logs: str,
+        is_eval=False
+    ):
         version_info = self.workspace.version_infos[version]
-        log_out = job_results.log_out[0][-self.max_log_len:]
-        log_err = job_results.log_err[0][-self.max_log_len:]
-        outcome_summary = self.assistant.act(
-            analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(
-                goal=self.task_description,
-                log_out=log_out,
-                log_err=log_err
-            ),
-            max_retries=self.max_retries
-        )
-        print(f'OUTCOME SUMMARY:\n{outcome_summary}')
-
-        eval_log_out = log_out
-        if eval_job_results is not None:
-            eval_log_out = eval_job_results.log_out[0][-self.max_log_len:]
-
-        # Parse metrics from log file
         metrics = {}
-        if self.metric_types is not None:
+
+        if is_eval:
+            selection_metric = self.eval_selection_metric
+            lower_is_better = self.eval_lower_is_better
+            metric_types = self.eval_metric_types
+            metrics_at_least = self.eval_metrics_at_least
+            metrics_at_most = self.eval_metrics_at_most
+        else:
+            selection_metric = self.selection_metric
+            lower_is_better = self.lower_is_better
+            metric_types = self.metric_types
+            metrics_at_least = self.metrics_at_least
+            metrics_at_most = self.metrics_at_most
+
+        if selection_metric:
             metrics = metrics_utils.extract_best_line_metrics(
-                eval_log_out, 
-                metric_types=self.metric_types,
-                selection_metric=self.selection_metric,
-                lower_is_better=self.lower_is_better,
-                metrics_at_least=self.metrics_at_least,
-                metrics_at_most=self.metrics_at_most
+                logs, 
+                metric_types=metric_types,
+                selection_metric=selection_metric,
+                lower_is_better=lower_is_better,
+                metrics_at_least=metrics_at_least,
+                metrics_at_most=metrics_at_most
+            )
+        else:
+            metrics = metrics_utils.extract_last_line_metrics(
+                logs,
+                metric_types=metric_types
             )
 
         # If no regex match on results
         if not metrics:
-            summary = json.loads(
-                self.workspace.view(
-                    'results.json', 
-                    version=version_info.parent_version,
-                    no_filename_headers=True).strip()
-            )
-            metric_types = {k: Union[type(v), None] for k, v in summary.get('metrics', {}).items()}
-            metric_types_str = json.dumps({k: type(v).__name__ for k, v in summary.get('metrics', {}).items()})
+            metric_types_str = json.dumps({k: v.__name__ for k, v in metric_types.items()})
+
             try:
                 metrics_response = self.assistant.act(
                     analysis_prompts.PARSE_METRICS_FROM_LOGS.format(
@@ -144,19 +154,69 @@ class ScienceRunner:
                     metrics['is_valid'] = False
 
         # Reject if any metrics go below a floor threshold
-        if self.metrics_at_least and (any(metrics.get(key) or float('inf')) < threshold 
+        if self.metrics_at_least and any(metrics.get(key, float('inf')) < threshold 
                for key, threshold in self.metrics_at_least.items()):
             metrics['is_valid'] = False
 
         # Reject if any metrics exceed a ceiling threshold
-        if self.metrics_at_most and (any(metrics.get(key) or float('-inf')) > threshold 
+        if self.metrics_at_most and any(metrics.get(key, float('-inf')) > threshold 
                for key, threshold in self.metrics_at_most.items()):
             metrics['is_valid'] = False
 
         # In the worst case, default to empty metrics with previous keys
         if not metrics:
+            summary = json.loads(
+                self.workspace.view(
+                    'results.json', 
+                    version=version_info.parent_version,
+                    no_filename_headers=True).strip()
+            )
             metrics = {k: None for k, _ in summary.get('metrics', {}).items()}
             metrics['is_valid'] = False
+
+        return metrics
+
+    def set_results_for_version(
+        self,
+        version: str,
+        job_results: slurm_utils.JobResult,
+        eval_job_results: Optional[slurm_utils.JobResult] = None
+    ):
+        version_info = self.workspace.version_infos[version]
+
+        # Summarize the main job results
+        log_out = job_results.log_out[0][-self.max_log_len:]
+        log_err = job_results.log_err[0][-self.max_log_len:]
+        outcome_summary = self.assistant.act(
+            analysis_prompts.SUMMARIZE_LOGS_PROMPT.format(
+                goal=self.task_description,
+                log_out=log_out,
+                log_err=log_err
+            ),
+            max_retries=self.max_retries
+        )
+        print(f'OUTCOME SUMMARY:\n{outcome_summary}')
+
+        # Extract metrics from job logs
+        metrics = {}
+        if self.selection_metric and log_out:
+            metrics = self.extract_metrics(version, log_out)
+
+        eval_metrics = {}
+        if eval_job_results is not None:
+            eval_log_out = eval_job_results.log_out[0][-self.max_log_len:]
+            eval_metrics = self.extract_metrics(version, eval_log_out, is_eval=True)
+
+        # Move private metrics into a separate private_metrics dict:
+        metrics.update(eval_metrics)
+
+        private_metrics = {
+            k: v for k, v in metrics.items()
+            if k != 'is_valid' and (k in self.eval_metrics_private or ('*' in self.eval_metrics_private and k in self.eval_metric_types))
+        }
+        for k in private_metrics:
+            del metrics[k]
+        metrics['private'] = private_metrics
 
         # Update meta based on whether job failed or failed to produce usable metrics
         if not metrics['is_valid'] or job_results.status == slurm_utils.JobStatus.FAILED:  # Update meta

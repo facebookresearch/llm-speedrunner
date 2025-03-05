@@ -35,7 +35,7 @@ class Ideator(Agent):
 		# Generate new ideas based on the contents of the parent version
 		abs_paths = [workspace.resolve_path(x, version=parent_version) for x in fnames]
 		code = workspace.view(abs_paths, version=parent_version)
-		summary = workspace.view('results.json', version=parent_version)
+		summary = version_info.get_summary_string(with_version_headers=False)
 
 		ideation_prompt = ideator_prompts.basic_ideation_prompt(
 			code=code,

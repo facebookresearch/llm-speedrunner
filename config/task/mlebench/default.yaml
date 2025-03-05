@@ -21,11 +21,13 @@ exp_config_args:
     Write a single file called solution.py that does the following:\n
       - Loads any relevant training data described in the task description.
       - Loads any relevant test data described in the task description.
+      - Note that train and test data may in general have different features. Pay attention to the format of each.
       - It is important your code references the training and test data paths exactly as above,
         via these environment variables, which will already be set correctly for you.\n
       - Performs any arbitrary training and evaluation logic on this data split.
         For example, you might hold out some subset of this data for the purposes
         of k-fold cross validation for model and hyperparameter selection.\n
+      - Your code must print out the best, final validation score to stdout in the format "validation_score: <score>".
       - Finally, evaluates the final model on the test data and writes the results
         to a file in the current directory called submission.csv.\n
 
@@ -46,6 +48,12 @@ exp_config_args:
   eval_fname: grader.py
 
   metric_types:
+    validation_score: float
+
+  selection_metric: validation_score
+  lower_is_better: false
+
+  eval_metric_types:
     score: float
     total_medals: int
     total_gold_medals: int
@@ -53,8 +61,8 @@ exp_config_args:
     total_bronze_medals: int
     total_above_median: int
 
-  selection_metric: score
-  lower_is_better: false
+  eval_metrics_private:
+    - '*'
 
 slurm_config_args:
   _target_: core.types.SlurmConfig

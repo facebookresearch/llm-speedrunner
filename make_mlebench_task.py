@@ -124,9 +124,11 @@ def main():
     with open(results_path) as f:
         results_dict = json.load(f)
     if args.lower_is_better:
-        results_dict['metrics']['score'] = float('inf')
+        results_dict['metrics']['validation_score'] = float('inf')
+        results_dict['metrics']['private']['score'] = float('inf')
     else:
-        results_dict['metrics']['score'] = float('-inf')
+        results_dict['metrics']['validation_score'] = float('-inf')
+        results_dict['metrics']['private']['score'] = float('-inf')
     with open(results_path, 'w') as f:
         json.dump(results_dict, f, indent=4)
 

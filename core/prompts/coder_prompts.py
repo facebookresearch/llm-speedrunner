@@ -13,9 +13,7 @@ CHILD_BUG_INFO_COMPONENT = """To help with your task, here is a list summarizing
 PACKAGE_INFO_COMPONENT= """**Never** install or ask to install any additional packages. Assume you have access to the following packages outside of the standard python packages:
 {packages}
 
-If necessary, you may access the following pretrained model checkpoints via HuggingFace:
-- BERT: https://huggingface.co/answerdotai/ModernBERT-base
-- CLIP-ViT: https://huggingface.co/openai/clip-vit-large-patch14
+If necessary, you may access pretrained model checkpoints via HuggingFace for smaller models like BERT variants or CLIP.
 """
 
 

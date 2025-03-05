@@ -177,7 +177,7 @@ class BoNScienceRunner(ScienceRunner):
             open_version = np.random.choice(buggy_versions).version
         else: # Otherwise set open set to the top-1 version
             open_version = self.workspace.get_top_k_versions(
-                selection_metric=self.selection_metric,
+                selection_metric=self.eval_selection_metric or self.selection_metric,
                 from_versions=current_versions,
                 lower_is_better=self.lower_is_better,
                 k=1
@@ -192,7 +192,7 @@ class BoNScienceRunner(ScienceRunner):
         start_iter_idx = len(completed_version_infos)
 
         if start_iter_idx < self.n_initial_hypotheses:
-            n_initial_hypotheses = self.n_initial_hypotheses - start_iter_idx + 1
+            n_initial_hypotheses = self.n_initial_hypotheses - start_iter_idx
             start_iter_idx = 0
 
         # Get starting open version (None defaults to template)

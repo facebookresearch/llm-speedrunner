@@ -18,9 +18,10 @@ from utils import fs_utils
 VERSION_REGEX = re.compile(r'^v_(\d+)$')
 
 
-VERSION_SUMMARY_TEMPLATE = """Version: {version}
-Parent version: {parent_version}
-Hypothesis: {hypothesis}
+VERSION_SUMMARY_HEADER = """Version: {version}
+Parent version: {parent_version}"""
+
+VERSION_SUMMARY_TEMPLATE = """Hypothesis: {hypothesis}
 Results: 
 {metrics}
 Has bugs? {has_bugs}
@@ -38,17 +39,29 @@ class VersionInfo:
     children: Optional[list[str]] = None
     stable_ancestor_version: Optional[str] = None
 
-    def get_summary_string(self):
-        metrics = '\n'.join(
-            [f'\t{k}: {v}' for k,v in self.results.get('metrics', {}).items()]
+    def get_summary_string(self, with_version_headers=True, with_private_metrics=False):
+        metrics_dict = self.results.get('metrics', {})
+
+        if not with_private_metrics and 'private' in metrics_dict:
+            del metrics_dict['private']
+
+        metrics_str = '\n'.join(
+            [f'\t{k}: {v}' for k,v in metrics_dict.items()]
         )
+
         outcome_summary = self.results.get('outcome_summary', '')
 
-        summary = VERSION_SUMMARY_TEMPLATE.format(
-            version=self.version, 
-            parent_version=self.parent_version,
+        if with_version_headers:
+            version_header = VERSION_SUMMARY_HEADER.format(
+                version=self.version, 
+                parent_version=self.parent_version,
+            )
+        else:
+            version_header = ''
+
+        summary = version_header + '\n' + VERSION_SUMMARY_TEMPLATE.format(
             hypothesis=self.results.get('hypothesis', ''),
-            metrics=metrics,
+            metrics=metrics_str,
             outcome_summary=outcome_summary,
             has_bugs='Yes' if self.bug_depth > 0 else 'No'
         )
@@ -414,6 +427,7 @@ class Workspace:
         scores = []
         for info in version_infos:
             metrics = info.results.get('metrics', {})
+
             score = metrics.get(selection_metric, None)
 
             if not metrics.get('is_valid', True):
@@ -462,7 +476,7 @@ class Workspace:
 
     def get_completed_versions(self) -> list[VersionInfo]:
         """Return all versions with results."""
-        return [info for _, info in self.version_infos.items() if info.results]
+        return [info for _, info in self.version_infos.items() if info.results and info.version != '0']
 
     def view_history(
         self,
