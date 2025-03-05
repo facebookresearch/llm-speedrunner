@@ -5,7 +5,9 @@ python plot/plot_progress.py \
 --workspace_template_path=workspace_templates/collatz \
 --workspace_path=workspaces/collatz_test2 \
 --metric=max_steps \
---ylabel='Max Collatz sequence length'
+--ylabel='Max Collatz sequence length' \
+--save_name=collatz_max_steps.pdf
+
 """
 from typing import Optional
 
@@ -17,11 +19,18 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib
+
+
 from matplotlib import rcParams
 from matplotlib.ticker import MaxNLocator
+import logging
+logging.basicConfig(level=logging.INFO)
 
-
-rcParams['font.family'] = 'Arial'
+if 'Arial' in [f.name for f in matplotlib.font_manager.fontManager.ttflist]:
+    rcParams['font.family'] = 'Arial'
+else:
+    logging.debug("Arial font is not available. Using default font.")
 rcParams['font.size'] = 14
 rcParams['figure.figsize'] = [12, 6]
 
