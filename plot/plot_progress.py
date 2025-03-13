@@ -15,6 +15,8 @@ import argparse
 import os
 import re
 import json
+import pprint
+
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -74,6 +76,13 @@ def gather_metrics(
             value = metrics_dict.get(m, None)
             data[m].append(value)
     
+    # check which solutions are valid and print them out
+    for key, values in data.items():
+        if key == 'is_valid':
+            true_indices = [i for i, value in enumerate(values) if value]
+            if true_indices:
+                print(f"Indices of valid versions: {true_indices}")
+                
     df = pd.DataFrame(data)
     df.sort_values(by="step", inplace=True, ignore_index=True)
 
@@ -135,7 +144,7 @@ def main():
     args = parser.parse_args()
 
     # Gather data into DataFrame
-    df = gather_metrics(args.workspace_path, [args.metric], args.workspace_template_path)
+    df = gather_metrics(args.workspace_path, [args.metric, 'is_valid'], args.workspace_template_path)
 
     if args.ignore_threshold is not None:
         df.loc[df[args.metric] > args.ignore_threshold, args.metric] = np.nan
