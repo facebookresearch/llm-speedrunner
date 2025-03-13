@@ -15,7 +15,6 @@ import argparse
 import os
 import re
 import json
-import pprint
 
 
 import pandas as pd
