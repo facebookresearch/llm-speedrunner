@@ -32,6 +32,8 @@ async def shutdown(
 
 
 async def main_async(cfg: DictConfig):
+    # Set the HYDRA_FULL_ERROR environment variable
+    os.environ['HYDRA_FULL_ERROR'] = '1'
     # Load existing config if it exists (e.g. reentering a preempted run)
     ws_root_path = fs_utils.expand_path(cfg.workspace_args.root_path)
     cfg_path = os.path.join(ws_root_path, 'config.yaml')

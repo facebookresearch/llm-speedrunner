@@ -27,7 +27,8 @@ system_prompt: >-
 
 workspace_args:
   _target_: core.workspace.Workspace
-  root_path: ${oc.env:PWD}/workspaces/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
+  # use /checkpoint/maui/... here to avoid disk quota exceeded errors
+  root_path: /checkpoint/maui/${oc.env:USER}/scientist/workspace/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
   template_dir: ${oc.env:PWD}/workspace_templates/${template_dirname}
   packages:
     - numpy
@@ -54,7 +55,7 @@ workspace_args:
     - coder_history.jsonl
     - aider.txt
     - meta.json
-    - results.json
+    # - results.json
     - cache
     - preview_resources.txt
     - "*grading_report.json" 
