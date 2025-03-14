@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: "deepseek-r1"
+model_url: "http://cr1-h100-p548xlarge-26:54173/v1/"
