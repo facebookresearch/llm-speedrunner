@@ -49,3 +49,8 @@ workspace_templates/mlebench/**
 
 # submitit
 submitit_logs/
+
+# nanogpt run artifacts
+logs/
+*.pt
+
