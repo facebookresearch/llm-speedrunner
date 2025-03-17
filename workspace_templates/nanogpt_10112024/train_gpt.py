@@ -335,7 +335,7 @@ class Hyperparameters:
     batch_size : int = 8*64 # batch size, in sequences, across all devices
     device_batch_size : int = 64 # batch size, in sequences, per device
     sequence_length : int = 1024 # sequence length, in tokens
-    num_iterations : int = 6200 # number of iterations to run
+    num_iterations : int = 100 # number of iterations to run
     learning_rate : float = 0.0036
     warmup_iters : int = 0
     warmdown_iters : int = 1800 # number of iterations of linear warmup/warmdown for triangular or trapezoidal schedule
@@ -459,9 +459,9 @@ for step in range(args.num_iterations + 1):
         val_loss /= val_steps
         # log val loss to console and to logfile
         if master_process:
-            print(f'step:{step} total_steps:{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f} step_avg:{training_time_ms/(timed_steps-1):.2f}ms')
+            print(f'n_steps:{step} total_steps:{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f} step_avg:{training_time_ms/(timed_steps-1):.2f}ms')
             with open(logfile, "a") as f:
-                f.write(f'step:{step} total_steps:{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f} step_avg:{training_time_ms/(timed_steps-1):.2f}ms\n')
+                f.write(f'n_steps:{step} total_steps:{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f} step_avg:{training_time_ms/(timed_steps-1):.2f}ms\n')
         # start the clock again
         torch.cuda.synchronize()
         t0 = time.time()
