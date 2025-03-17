@@ -138,7 +138,7 @@ class ScienceRunner:
             try:
                 metrics_response = self.assistant.act(
                     analysis_prompts.PARSE_METRICS_FROM_LOGS.format(
-                        logs=eval_log_out, metric_types=metric_types_str
+                        logs=logs, metric_types=metric_types_str
                     ),
                     validator=lambda x: validators.validate_json(x, metric_types),
                     max_retries=self.max_retries
