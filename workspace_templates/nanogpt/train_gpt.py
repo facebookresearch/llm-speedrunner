@@ -584,7 +584,7 @@ for step in range(train_steps + 1):
         val_loss /= val_steps
         del val_loader
         dist.all_reduce(val_loss, op=dist.ReduceOp.AVG)
-        print0(f"step:{step}/{train_steps} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms step_avg:{training_time_ms/(timed_steps-1):.2f}ms", console=True)
+        print0(f"n_steps:{step} total_steps:{train_steps} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f} step_avg:{training_time_ms/(timed_steps-1):.2f}ms", console=True)
         model.train()
         # start the clock again
         torch.cuda.synchronize()
