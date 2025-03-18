@@ -2,6 +2,7 @@ from typing import Callable, Optional
 import asyncio
 import dataclasses
 import logging
+import submitit
 
 import numpy as np
 
@@ -118,26 +119,27 @@ class BoNScienceRunner(ScienceRunner):
         else:
             command = f'python {self.entry_fname}'
 
-        job = slurm_utils.submit_job(
-            command=command, 
-            working_dir=self.workspace.resolve_path(version=version),
-            **dataclasses.asdict(self.slurm_config)
-        )
+        with submitit.helpers.clean_env():
+            job = slurm_utils.submit_job(
+                command=command, 
+                working_dir=self.workspace.resolve_path(version=version),
+                **dataclasses.asdict(self.slurm_config)
+            )
 
-        # Monitor experiment status and bookkeep final outcome
-        callback = None
-        if self.eval_fname is None:
-            callback = lambda res: self._job_callback(version, res)
-        else:  # We save the job result to pass into the eval callback
-            def record_job_result(res: slurm_utils.JobResult):
-                metadata[version] = res
-            callback = lambda res: record_job_result(res)
+            # Monitor experiment status and bookkeep final outcome
+            callback = None
+            if self.eval_fname is None:
+                callback = lambda res: self._job_callback(version, res)
+            else:  # We save the job result to pass into the eval callback
+                def record_job_result(res: slurm_utils.JobResult):
+                    metadata[version] = res
+                callback = lambda res: record_job_result(res)
 
-        slurm_utils.JobObserver.shared.observe(
-            job=job,
-            metadata=metadata,
-            callback=callback,
-        )
+            slurm_utils.JobObserver.shared.observe(
+                job=job,
+                metadata=metadata,
+                callback=callback,
+            )
 
     async def _run_eval(
         self, 
