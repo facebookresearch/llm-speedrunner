@@ -18,7 +18,7 @@ def run_scientist(
     model_name = "deepseek_r1"
     n_iterations = 5
     n_hypotheses = 5
-    n_initial_hypotheses = 7
+    n_initial_hypotheses = 10
     debug_prob = 0.25
     max_bug_depth=5
     cmd = [
@@ -27,12 +27,14 @@ def run_scientist(
         f"task={task_name}",
         f"model={model_name}",
         f"n_iterations={n_iterations}",
+        # change this to aide for aide runs
         f"science_runner=bon",
         f"exp_config_args.selection_metric=val_loss",
         f"exp_config_args.metrics_at_most=null",
+        # leaving these here for future test runs
         # f"science_runner_args.max_bug_depth={max_bug_depth}",
         # f"science_runner_args.debug_prob={debug_prob}",
-        # # f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}",
+        # f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}",
         # f"science_runner_args.n_hypotheses={n_hypotheses}",
     ]
     

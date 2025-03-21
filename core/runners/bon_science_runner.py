@@ -248,7 +248,7 @@ class BoNScienceRunner(ScienceRunner):
                         ignore_ideas=hypotheses,  # Avoid duplicating previous ideas
                         history=relevant_history,
                         knowledge=self.knowledge.search(as_string=True),
-                        max_retries=1
+                        max_retries=self.max_retries
                     )
                 )
                 hypotheses.append(hypothesis)
