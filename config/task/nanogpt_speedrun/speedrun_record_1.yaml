@@ -1,0 +1,66 @@
+# @package _global_
+
+template_dirname: nanogpt_speedrun/record_1
+
+n_iterations: 3
+
+exp_config_args:
+  _target_: core.types.ExperimentConfig
+
+  max_retries: 3
+
+  task_description: >-
+    Improve train_gpt2.py so that it achieves or goes below the
+    target val_loss value of 3.28 in the shortest train_time possible.
+
+  code_instructions: >-
+    Make sure your code changes preserve these aspects of train_gpt2.py:\n
+    - The script continues to be runnable via simply calling `torchrun --nproc_per_node=8 train_gpt2.py`.\n
+    - Do NOT change the value of train_files, val_files, or val_token values in 
+      the Hyperparameters config used to set the training args.\n
+    - Make sure the values of these hyperparameters are not changed,
+      and keep to using the current os.environ variables.\n
+    - Always keep save_checkpoint set to False in the training args.\n
+    - Keep all print0 statements the same. Do not change the arguments 
+      used in the current print0 statements, so to ensure the logging format is preserved.\n
+    - When possible, just change the train_gpt2.py file without making extra files.\n
+    - Important: I care about optimizing the performance of the implementation and
+      do not care how organized or disorganized the code is.
+    - Any bugs will be described in the "outcome_summary" value of the summary, if provided.
+      Always focus on addressing these when present, before improving other parts of the code.
+
+    If you violate any of the above constraints, the experiment run will be invalid.\n
+
+    Your job will be run on a single 8xH100 node with access to all 8 GPUs.
+
+  entry_fname: train_gpt2.py
+  fnames: 
+    - 'train_gpt2.py'
+
+  metric_types:
+    n_steps: int
+    val_loss: float
+    train_time: int
+
+  metrics_at_most:
+    val_loss: 3.28
+
+  selection_metric: train_time
+  lower_is_better: true
+
+slurm_config_args:
+  _target_: core.types.SlurmConfig
+
+  nodes: 1
+  tasks_per_node: 8
+  gpus_per_node: 8
+  cpus_per_task: 12
+  job_ttl: 60
+  use_torchrun: true
+  job_name: nanogpt_speedrun_record_1
+  account: maui
+  qos: maui_high
+  env_vars:
+    NANOGPT_TRAIN_FILES: "/home/zhaobc/fineweb_data/fineweb10B/fineweb_train_*.bin"
+    NANOGPT_VAL_FILES: "/home/zhaobc/fineweb_data/fineweb10B/fineweb_val_*.bin"
+    NANOGPT_VAL_TOKENS: "10485760"
