@@ -1,0 +1,32 @@
+
+🚀 **NanoGPT just got FASTER!**  
+New optimizations slash training time by 23% (3.28 val loss in 3.95min 🏎️), thanks to:  
+- Revamped Muon optimizer with async all_gather 🧲  
+- Pinned memory dataloader + non-blocking transfers 📦  
+#MLPerf #LLMOptimization
+
+🧠 **Smarter attention patterns!**  
+Introducing sliding-window block masking:  
+- Combines causal+document+window attention 📜  
+- Precomputed masks via BlockMask.from_kv_blocks 🎭  
+- 5s saved via manual mask creation ✂️  
+#TransformerEvolves #EfficientAI
+
+🕸️ **U-Net architecture upgrades!**  
+- Symmetric value embeddings across encoder/decoder ⚖️  
+- Reduced parameter count + improved gradient flow 🌊  
+- Skip connections with learnable weights 🏗️  
+#ArchitectureHacks #DeepLearning
+
+⚡ **Training loop turbocharged**  
+- Simplified gradient accumulation to 1-step 🧼  
+- perf_counter timing + momentum warmup curve 📈  
+- 17s saved via @leloykun's value residual tweaks 💡  
+#PyTorchTips #AIEngineering
+
+🔧 **Under-the-hood gems**  
+- LM_head logit softcap stabilization 🧊  
+- Tensor-typed params for compiler friendliness 🤖  
+- Memory-mapped data loading 🗺️  
+Every 100ms counts in the race for efficiency!  
+#MLOps #GPUProgramming

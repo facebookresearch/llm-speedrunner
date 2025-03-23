@@ -1,0 +1,96 @@
+
+# Pseudo Code Changes
+
+1. **Rotary Positional Embedding Optimization**
+```
+CLASS Rotary:
+    BEFORE:
+        Compute inv_freq during forward pass
+        Recompute cos/sin matrices every forward pass
+        
+    NOW:
+        Initialize inv_freq as persistent buffer during construction
+        Cache cos/sin matrices until sequence length changes
+        Inline rotation calculation directly in forward pass
+        
+    IMPACT: Reduces redundant computations, improves efficiency for variable length sequences
+```
+
+2. **Value Residual Learning System**
+```
+CLASS GPT:
+    ADD NEW COMPONENT:
+        vte = Embedding layer for token value residuals (12×n_embd dimensions)
+        
+    FORWARD FLOW:
+        vi = Split vte embeddings into 12 chunks (one per transformer layer)
+        Each attention layer blends current value with vi chunk using learnable lambda
+        
+    IMPACT: Enables persistent value patterns across layers, inspired by neural ODE approaches
+```
+
+3. **Simplified Attention Architecture**
+```
+CLASS CausalSelfAttention:
+    BEFORE:
+        Complex parameter passing with config object
+        Separate RMSNorm calls for Q/K
+        External rotary embedding application
+        
+    NOW:
+        Direct dimension/head parameters
+        Unified norm() helper function
+        Integrated rotary embedding calculation
+        
+    IMPACT: Reduces parameter passing overhead, improves code maintainability
+```
+
+4. **Dynamic Training Infrastructure**
+```
+TRAINING LOOP:
+    ADD DYNAMIC BLOCK SIZE:
+        attn_blocksize = 64 * ((step/iterations * 1792) // 64)
+        
+    GRADIENT ACCUMULATION:
+        Use context manager for gradient sync optimization
+        Only sync gradients on final accumulation step
+        
+    IMPACT: Enables progressive attention window scaling and optimized distributed training
+```
+
+5. **Memory-Efficient Data Loading**
+```
+CLASS DistributedDataLoader:
+    BEFORE:
+        Per-device batch size (B) handling
+        Complex buffer management
+        
+    NOW:
+        Simplified sequence-centric loading
+        Single sequence per process with length T
+        Automatic shard advancement
+        
+    IMPACT: Reduces memory fragmentation, enables longer context processing
+```
+
+6. **Parameter Optimization Strategy**
+```
+OPTIMIZER SETUP:
+    SEPARATE PARAMETER GROUPS:
+        Group 1: wte + vte embeddings (lr=0.6)
+        Group 2: lm_head weights (lr=0.008)
+        Group 3: Transformer params + skip_weights (via Muon optimizer)
+        
+    IMPACT: Fine-grained control over learning dynamics for different parameter types
+```
+
+7. **Architectural Simplifications**
+```
+GLOBAL CHANGES:
+    - Replace repeated RMSNorm calls with norm() helper
+    - Remove redundant math backend controls
+    - Streamline dimension calculations
+    - Simplify batch size assumptions (B=1)
+    
+    IMPACT: Reduces code complexity while maintaining performance characteristics
+```

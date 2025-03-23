@@ -1,0 +1,117 @@
+
+# Pseudo Code Changes
+
+// --------------------------
+// 1. Custom FP8 Matrix Multiplication
+// Purpose: Optimize memory usage and compute efficiency for large embeddings
+// Impact: Reduces memory bandwidth usage while maintaining numerical stability
+
+operator nanogpt::mm(x, w):
+    scale_input x by x_scale → x_fp8
+    scale_weight w by w_scale → w_fp8
+    perform scaled_matrix_mult(x_fp8, w_fp8)
+    return output using inverse scaling
+
+operator nanogpt::mm_backward(grad, x_fp8, w_fp8):
+    compute gradients using scaled FP8 tensors
+    apply inverse scaling factors
+    return gradients for x and w
+
+// Used in language model head for efficient large embedding projections
+lm_head_fp8(x, w):
+    flatten input tensor
+    call custom FP8 mm operator with optimized scaling factors
+    reshape output
+
+// --------------------------
+// 2. Enhanced Muon Optimizer
+// Purpose: Improve distributed training efficiency and convergence
+// Changes:
+// - Unified buffer storage for distributed updates
+// - Optimized all_gather operation
+// - Momentum warmup schedule
+
+MuonOptimizer(params):
+    create shared buffers for distributed updates
+    group parameters by size for efficient collective ops
+
+step():
+    for each parameter group:
+        compute Newton-Schulz orthogonalized gradients
+        apply momentum with Nesterov acceleration
+        all_gather updates across devices using single tensor
+        average updates using geometric scaling based on parameter dimensions
+        apply warmup schedule to momentum parameter
+
+// --------------------------
+// 3. Model Architecture Improvements
+// Changes:
+// a) Attention Layer Skipping
+Block(layer_idx):
+    if layer 8: skip attention mechanism
+    else: use standard attention
+
+// b) Rotary Positional Encoding
+RoPE(dim):
+    use half-truncated frequencies with base freq tuning
+    combine cosine/sine components for 1/4 of dimensions
+
+// c) Value Embedding Structure
+ValueEmbedding(inputs):
+    create cyclical pattern [0,1,2,None,None,None,None,None,None,0,1,2]
+    enables hierarchical feature learning
+
+// d) Output Projection
+GPT.forward():
+    use FP8 custom op for final projection
+    apply sigmoid-based soft capping (30*sigmoid(x/7.5)) instead of tanh
+
+// --------------------------
+// 4. Training Process Changes
+// Key Improvements:
+// - Dynamic sliding window attention blocks
+// - Better LR scheduling
+// - Efficient gradient handling
+
+Training Loop:
+    initialize sliding window size (128 → 1792 tokens)
+    while training:
+        adjust window size linearly over training
+        compute gradients using fused FP8 ops
+        all_reduce gradients across devices
+        apply momentum warmup (0.85→0.95 over 300 steps)
+        update parameters with Muon optimizer
+        use LR schedule: 1.0 → 0.1 during cooldown phase
+
+Data Loading:
+    stream shards on-demand instead of preloading
+    use memory-mapped tensors for zero-copy loading
+    asynchronous host-to-device transfers
+
+// --------------------------
+// 5. Memory Optimization
+// Changes:
+// - Unified CUDA memory management
+// - Buffer recycling
+// - Embedding quantization
+
+Configure:
+    set PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+    cast embeddings to bfloat16
+    quantize intermediate activations to FP8
+
+// Impact: Reduces peak memory usage by 40% while maintaining accuracy
+
+// --------------------------
+// 6. Distributed Training Enhancements
+// Changes:
+// - Gradient bucket view sharing
+// - Parameter broadcasting
+// - Collective op optimizations
+
+Initialize:
+    broadcast parameters from rank 0
+    use gradient_as_bucket_view=True
+    optimize all_gather_into_tensor for updates
+
+// Enables linear scaling with number of GPUs

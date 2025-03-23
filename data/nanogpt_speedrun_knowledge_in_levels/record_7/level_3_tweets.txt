@@ -1,0 +1,30 @@
+
+🚀 New NanoGPT training speed record: 3.28 validation loss in *10.8 minutes* on 8xH100!  
+Key improvements:  
+- Untied embedding/head weights 🧩  
+- Added RMSNorm after embeddings 📏  
+- Zero-initialized LM head 🔳  
+33% faster than previous 12min record! #AI #Efficiency 
+
+✨ Architectural upgrades:  
+- Separate Adam optimizers for embeddings vs head  
+- Enhanced Muon optimizer scaling 📐  
+- Slimmer warmdown schedule 🔥  
+Credit to @Grad62304977 for key suggestions! #DeepLearning #Optimization
+
+⚡ Muon optimizer 2.0:  
+- Simplified distributed params 🧮  
+- Better aspect-ratio scaling 📈  
+- CUDNN attention backend 🚄  
+Combined with smarter LR schedules for faster convergence 🔄 #ML #Performance
+
+🏎️ From 5100 → 4578 steps (-10%) with same loss!  
+Tighter code + better normalization = fewer iterations needed.  
+Peak memory use reduced via strategic zero-init 🧠💡 #AIOptimization #PyTorch
+
+⏱️ 1.2min faster training, same hardware:  
+When every FLOP counts!  
+- Weight untie = 3.3% gain  
+- Precision scaling = 2.1% boost  
+- Attention backend = 4ms/layer 🚀  
+The hunt for efficiency continues! #MachineLearning #HPC

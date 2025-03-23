@@ -1,0 +1,26 @@
+
+🚀 New #NanoGPT speed record: 3.28 val loss in 4.66 mins (6.7% faster than last!)  
+🔥 Key upgrade: FlexAttention blocksize warmup - starts small (64 tokens), scales to 1792!  
+💡 Models learn local patterns first before tackling long-range dependencies. #Efficiency #AI  
+
+⚡ Optimizer upgrades:  
+- Adam beta 0.9→0.8 for quicker adaptation  
+- Muon momentum warms up 40% faster  
+- LR schedules aligned with attention scaling  
+🧠 Better parameter harmony = 1750 steps vs old 1875! #DeepLearning  
+
+🌱 Attention window warmup magic:  
+Starts focused (64-token context) ➡️ grows to full 1792-token capacity  
+🚦Matches model's evolving learning capabilities = better compute utilization  
+💡 Inspired by @karpathy's hlb_gpt but made possible via @PyTorch FlexAttention!  
+
+📉 12.5% fewer training steps + smarter attention = same great loss in less time  
+🛠️ Technical wins:  
+- Dynamic mask generation  
+- Optimized cooldown phase  
+- Parameter-efficient gradient sync  
+⚡ 279ms/step avg on consumer GPUs! #MLOps  
+
+🎯 Key takeaway: Progressive attention scaling + optimizer tuning unlocks new SOTA  
+🐦 1.4M tokens/sec throughput maintained while improving data efficiency  
+💻 All in pure PyTorch with @chillee's FlexAttention magic! #AISpeedrunners #LLM

@@ -1,0 +1,55 @@
+
+# Pseudo Code Changes
+
+// Core Algorithm Improvements
+Algorithm: Newton-Schulz Orthogonalization
+1. Split normalization into explicit step:
+   X = G (cast to bfloat16)
+   X /= (X.norm() + eps)  // More stable than using original G's norm
+2. Remove final dtype conversion to preserve numerical precision
+
+Algorithm: Rotary Positional Embeddings
+1. Update caching mechanism:
+   - Store cos/sin tensors in bfloat16 instead of float32  // Reduces memory usage
+   - Remove buffer registration for inv_freq  // Simplifies model serialization
+
+Algorithm: Attention Mechanism (CausalSelfAttention)
+1. Replace combined qkv projection with separate layers:
+   - Use c_q, c_k, c_v instead of c_attn  // Enables individual parameter control
+2. Add RMS normalization to queries/keys:
+   q = RMSNorm(q, dim=head_dim)
+   k = RMSNorm(k, dim=head_dim)  // Stabilizes attention scores
+3. Initialize output projection to zero  // Suggested improvement for training stability
+
+Algorithm: MLP Block
+1. Replace GELU with squared ReLU activation:
+   x = relu(x)^2  // ~1-2% performance improvement per paper
+2. Zero-initialize final projection layer  // Improves training dynamics
+
+// Architectural Changes
+Model Architecture:
+1. Replace custom RMSNorm with framework implementation:
+   Use F.rms_norm() instead of manual calculation  // Simplifies code and improves performance
+2. Modify head configuration:
+   - Reduce n_head from 12->6 with larger head_dim  // Balances computation efficiency
+3. Adjust vocabulary size:
+   Expand vocab_size to 50304 (nearest 128 multiple)  // Improves memory alignment
+
+// Training Optimization
+Validation Process:
+1. Use training context for validation:
+   Keep autograd during validation but detach loss  // Maintains mixed precision benefits
+2. Add explicit loss tensor cleanup  // Reduces GPU memory usage
+
+Hyperparameters:
+1. Shorten training schedule:
+   num_iterations 6200->5100
+   warmdown_iters 1800->1450  // Adjusted for improved convergence
+2. Remove attention scaling factor  // Now handled by QK normalization
+
+Key Impact Summary:
+- Numerical stability improvements through better normalization
+- Memory optimization via precision control (bfloat16) and caching
+- Architecture simplifications using framework-native operations
+- Training dynamics improvements through initialization changes
+- Compute efficiency via head dimension and vocabulary alignment
