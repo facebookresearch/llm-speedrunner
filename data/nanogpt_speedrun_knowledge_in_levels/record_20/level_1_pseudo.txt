@@ -1,0 +1,89 @@
+
+# Pseudo Code Changes
+
+1. **FP8 Matrix Multiplication Generalization**
+```
+// Changed from lm_head specific implementation to generic CastedLinear integration
+class CastedLinear:
+    def __init__(use_fp8, x_scale, w_scale, grad_scale):
+        self.fp8_params = (use_fp8, x_scale, w_scale, grad_scale)
+    
+    def forward(x):
+        if training and use_fp8:
+            // Use custom FP8 matmul with quantization scaling
+            return fp8_mm(x, weight, x_scale, w_scale, grad_scale)
+        else:
+            return standard_linear(x, weight)
+
+// Removed separate lm_head_fp8 function, integrated into CastedLinear
+lm_head = CastedLinear(..., use_fp8=True, x_s=2.0, w_s=512.0, grad_s=524288.0)
+```
+
+2. **Attention Mechanism Improvements**
+```
+class CausalSelfAttention:
+    def __init__(head_dim, max_seq_len):
+        // Explicit head dimension parameterization
+        self.head_dim = head_dim
+        // QKV projection with head_dim separation
+        qkv_proj = Linear(dim, 3*num_heads*head_dim)
+        // Rotary PE with max sequence length constraint
+        self.rotary = Rotary(head_dim, max_seq_len)
+        
+    def forward():
+        // New execution order: QK normalization before rotary
+        q, k = normalize(q), normalize(k)
+        q, k = rotary(q), rotary(k)
+        // Simplified tensor reshaping
+```
+
+3. **Dynamic Block Mask Generation**
+```
+class GPT:
+    def create_block_masks():
+        // Document-aware sliding window attention
+        blocks = sequence_length / block_size
+        create masks considering:
+            - Causal relationships between blocks
+            - Document boundaries (special token 50256)
+            - Sliding window size constraints
+        
+        return BlockMask(long_window), BlockMask(short_window)
+```
+
+4. **Value Embedding Architecture**
+```
+class ValueEmbedding:
+    def __init__(num_layers):
+        // Dynamic embedding layer count based on total model depth
+        self.ve_pattern = [emb1, emb2, emb3] + [None]*(num_layers-6) + [emb1, emb2, emb3]
+    
+    // Creates U-net like skip connections with value residuals
+```
+
+5. **Training Process Optimizations**
+```
+training_loop():
+    // Dynamic window size scheduling
+    window_size = linearly_increase(128 -> 1792 blocks)
+    
+    // Memory optimizations
+    use pinned_memory_for_data_loading()
+    zero_initialize_sensitive_weights()
+    
+    // Mixed precision strategy
+    embed_layers.use_bfloat16()
+    fp8_for_linear_projections()
+    
+    // Optimizer configuration
+    separate_params_for_adam_vs_muon()
+    custom_learning_rate_scheduling()
+```
+
+**Key Improvements:**
+- FP8 quantization generalized across all linear layers instead of just final head
+- More stable attention through QK normalization and explicit head_dim control
+- Document-aware attention masks enable longer context processing
+- Flexible value embedding architecture adapts to different model depths
+- Training dynamics improved through progressive window sizing and memory optimizations
+- Separation of optimization strategies (Adam vs Muon) for different parameter types

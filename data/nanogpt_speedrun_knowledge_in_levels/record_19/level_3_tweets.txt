@@ -1,0 +1,27 @@
+
+🚀 Breaking the 3-minute barrier! 🚀  
+NanoGPT now trains in under 3 mins on 8x H100s (~$0.40/session) with key optimizations:  
+- Merged QKV weights 🤝  
+- Long-Short Sliding Window Attention 🪟  
+- Batched Muon optimizer ⚡  
+#AISpeedruns #EfficiencyMatters
+
+🧠 Smarter Attention = Faster Learning!  
+Scaled attention logits (0.12x vs 1/√d) + QK normalization helps model focus better during crunch time 🎯. Combined with block-wise context warmups, shaved 2-3ms/step!  
+#MLOps #TransformerHacks
+
+⚙️ Adam Gets a Precision Boost!  
+Lowered epsilon to 1e-10 💡 fixes gradient vanishing in zero-init layers. Fewer training steps needed for same quality thanks to @YouJiacheng's sharp eye 👁️.  
+#DeepLearning #OptimizationWins
+
+🦾 Muon Optimizer Goes Supersonic!  
+Batched orthogonalization + async gather cuts 1-2s walltime. Merged QKV matrices play nicer with Newton-Schulz iterations 🚄.  
+#PyTorch #AIEngineering
+
+🎯 Leaner Training, Better Results!  
+Reduced iterations from 1395 → 1393 through:  
+- Global-local attention patterns 🌐🔍  
+- Learned attention scaling 📈  
+- Precision gradient handling ⚖️  
+Total cost: <$0.40 per training run!  
+#CostEffectiveAI

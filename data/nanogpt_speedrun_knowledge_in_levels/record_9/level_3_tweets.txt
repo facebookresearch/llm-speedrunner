@@ -1,0 +1,22 @@
+
+🚀 Major NanoGPT speed boost! Switched hidden states to bfloat16 while maintaining performance, cutting training time from 8.2 to 7.8 minutes on 8xH100s. 0.4min saved = 5% faster convergence! ⚡ #DeepLearning #AI
+
+💡 Clever mixed precision: New CastedLinear class keeps weights in fp32 while enabling bfloat16 activations. Best of both worlds - stability + speed! Memory usage dropped without sacrificing model quality. 💾 #MachineLearning
+
+🔥 Validation loss 3.28 achieved through: 
+- Simplified attention computation 
+- Optimized gradient sync patterns 
+- Smarter mixed precision config 
+All while improving code readability! 👩💻 #EfficiencyMatters
+
+⚡️ 15% faster per-step times achieved by:
+1. Removing redundant autocast contexts 
+2. Streamlining loss calculation 
+3. Adding proper no_grad() in validation 
+PyTorch compilation + bfloat16 = magic! ✨ #AIEngineering
+
+🧠 Muon optimizer now works seamlessly with bfloat16 training pipeline. Key improvements:
+- Better memory utilization 
+- Faster distributed sync 
+- More stable convergence 
+Pushing the limits of orthogonal gradient methods! 🚀 #DeepLearning

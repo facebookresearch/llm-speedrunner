@@ -1,0 +1,27 @@
+
+🧵 Introducing major upgrades to our #NanoGPT training setup with #Muon optimizer! 🚀
+
+1/ 🚀 New speed record: 3.28 val loss in 22.3 mins ⏱️ (11% faster vs previous 24.9 mins)! 
+Muon's orthogonalized momentum eliminates learning rate warmup ❄️ while maintaining stability. #DeepLearning #AI
+
+2/ Key improvements in v2:
+✅ Split QKV matrices before orthogonalization (@bozavlado's suggestion)
+✅ Doubled embedding layer LR with AdamW
+✅ Unit variance scaling for consistent updates
+🔥 7000 iterations completed faster than ever! #PyTorch #Optimization
+
+3/ Behind the scenes:
+🧠 Newton-Schulz iterations in bfloat16 
+⚡ Combined AdamW + Muon optimizers
+🔧 Automatic gradient accumulation scaling
+Peak memory: under 3.5GB per GPU 💻
+Code now 23% more concise! #MLOps
+
+4/ Try our updated implementation for:
+👉 Faster convergence
+👉 More stable training
+👉 Better hardware utilization
+Check the GitHub repo for details! 👇
+#OpenSource #AIEngineering
+
+Final results speak for themselves - sometimes simpler math wins! 🏆 Who's ready to push LLM training further? 💪

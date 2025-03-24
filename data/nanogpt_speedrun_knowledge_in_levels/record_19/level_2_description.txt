@@ -1,0 +1,62 @@
+
+1. **Merged QKV Weights Implementation**
+- **What Changed**: Replaced separate Q/K/V linear layers with a single batched QKV weight matrix
+- **Why Beneficial**: 
+  - Reduces memory fragmentation and enables larger fused matrix operations
+  - Allows better utilization of GPU tensor cores through batched matmul
+  - Compiler can optimize single large operation better than 3 smaller ones
+- **Performance Impact**: 1-2 second speed improvement through reduced kernel launch overhead
+- **Technical Challenge**: Required adapting Muon optimizer to handle batched parameters while maintaining convergence
+
+2. **Long-Short Sliding Window Attention**
+- **What Changed**: 
+  - Layers alternate between long (full context) and short (half context) attention spans
+  - Dynamic block mask generation with separate patterns for encoder/decoder
+- **Why Beneficial**:
+  - Reduces computation in shallow layers while preserving deep layer capacity
+  - Mimics successful patterns from Gemma 2's hybrid attention
+- **Performance Impact**: 3ms/step speed gain with equivalent model quality
+- **Technical Challenge**: Complex mask coordination across layers while maintaining document boundary awareness
+
+3. **Attention Scale Adjustment**
+- **What Changed**:
+  - Increased attention scale from 0.88 (1/√d) to 0.12
+  - Added explicit scaling constant rather than head_dim normalization
+- **Why Beneficial**:
+  - Compensates for RMSNorm's lack of learnable scale parameters
+  - Allows sharper attention focus in later training stages
+- **Performance Impact**: ~2-3 second overall training time reduction
+- **Technical Challenge**: Required empirical tuning to find optimal value that works with QK normalization
+
+4. **Adam Optimizer Epsilon Adjustment**
+- **What Changed**: Reduced epsilon from 1e-8 to 1e-10
+- **Why Beneficial**:
+  - Prevents gradient underflow in zero-initialized LM head
+  - Improves numerical stability with large batch training
+- **Performance Impact**: Enabled reducing training steps by 10 (1 sec saving)
+- **Technical Challenge**: Diagnosing subtle training instability patterns
+
+5. **Batched Muon Implementation**
+- **What Changed**:
+  - Modified Newton-Schulz iteration to handle batched matrices
+  - Optimized parameter group handling in optimizer
+- **Why Beneficial**:
+  - Enables processing merged QKV weights efficiently
+  - Reduces memory overhead of orthogonalization step
+- **Performance Impact**: 1-2 second speed gain through batched NS iterations
+- **Technical Challenge**: Maintaining numerical stability while vectorizing orthogonalization
+
+**Overall Performance Impact**:
+These changes collectively reduced training time from >3 minutes to sub-3 minutes through:
+1. **15% faster iteration speed** from computational optimizations
+2. **5% reduction in required steps** from improved training stability
+3. **Better GPU utilization** through batched operations
+4. **Smarter attention patterns** reducing redundant computation
+
+**Key Technical Breakthroughs**:
+1. Solved merged QKV vs Muon compatibility through batched NS iterations
+2. Developed hybrid attention schedule that maintains quality with reduced compute
+3. Identified critical relationship between RMSNorm and attention scaling
+4. Diagnosed epsilon-induced instability in large-scale distributed training
+
+The changes demonstrate sophisticated coordination between numerical linear algebra optimizations, compiler-aware kernel fusion, and deep learning theory insights - pushing the boundaries of what's possible in extreme efficiency training.

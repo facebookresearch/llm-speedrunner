@@ -1,0 +1,99 @@
+
+# Pseudo Code Changes
+
+1. **Muon Optimizer Simplification**
+```
+Muon Optimizer:
+- Remove SVD-based orthogonalization backend
+- Consolidate on Newton-Schulz iterative method
+- Simplify parameter structure:
+  Original: backend selection + steps
+  New: Directly specify Newton-Schulz steps (ns_steps)
+- Change distributed coordination variable name:
+  num_process ➔ world_size for clarity
+
+Impact: Reduces code complexity while maintaining numerical stability through iterative approximation
+```
+
+2. **Attention System Upgrades**
+```
+CausalSelfAttention:
+- Rename n_head ➔ num_heads
+- Add Grouped Query Attention (GQA) support:
+  flex_attention(..., enable_gqa=True)
+- Simplify value residual handling:
+  Original: Single vte embedding
+  New: ValueEmbedding module with U-net structure
+  
+Impact: Enables more efficient attention computation and better gradient flow through value embeddings
+```
+
+3. **Dynamic Block Mask Generation**
+```
+Block Mask Construction:
+Original: Simple sliding window mask
+New:
+def create_doc_swc_block_mask():
+    Combine:
+    1. Causal attention constraints
+    2. Document boundary constraints
+    3. Dynamic sliding window size (blocks instead of tokens)
+    4. Block sorting for efficient memory access
+    
+Impact: Reduces unnecessary computation while maintaining document-aware context
+```
+
+4. **Training Loop Optimization**
+```
+Training Step:
+- Add gradient accumulation with context managers:
+  Use no_sync() during accumulation steps
+  Enable torch.compile optimizations
+- Implement dynamic sliding window scheduling:
+  Linear increase from 64 to 1792 tokens over training
+  Operate in block units (128 tokens/block)
+  
+Impact: Enables larger effective batch sizes and progressive context window learning
+```
+
+5. **Value Embedding Architecture**
+```
+New ValueEmbedding Module:
+- Contains 6 learnable embedding tables
+- Encoder-Decoder U-net structure:
+  ve_enc = first half of embeddings
+  ve_dec = reversed second half
+  
+Impact: Creates information bottlenecks while preserving gradients through symmetric structure
+```
+
+6. **Distributed Training Improvements**
+```
+Key DDP Changes:
+- Set gradient_as_bucket_view=True
+- Remove redundant buffer allocations
+- Simplify parameter group construction
+- Add explicit process group synchronization
+
+Impact: Reduces memory footprint and improves inter-GPU communication efficiency
+```
+
+```python
+# High-Level Training Flow (Revised)
+Initialize distributed training:
+    Set up NCCL backend with proper device mapping
+    
+While training:
+    Calculate dynamic sliding window size ➔ convert to block units
+    Generate document-aware block mask
+    
+    Forward pass:
+        Encoder path: Process through first N/2 layers
+        Decoder path: Combine encoder outputs with reversed value embeddings
+        
+    Backward pass:
+        Use gradient accumulation with context managers
+        Apply Muon optimizer with momentum warmup
+        
+    Update learning rates with cosine schedule
+```

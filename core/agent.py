@@ -30,7 +30,7 @@ class Agent:
     def act(
         self, 
         instruction: str,
-        validator: Optional[Callable[str, Optional[str]]] = None,
+        validator: Optional[Callable[str, Optional[str]]] = None, # type: ignore
         max_retries=1
     ) -> str:
         response = self.llm.generate(instruction)

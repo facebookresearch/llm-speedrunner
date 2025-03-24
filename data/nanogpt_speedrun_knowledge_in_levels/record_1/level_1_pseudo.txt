@@ -1,0 +1,82 @@
+
+# Pseudo Code Changes
+
+1. Rotary Position Embedding Implementation
+# Added rotary position embeddings to attention mechanism
+class RotaryPositionEmbedding:
+    def __init__(dim, base=10000):
+        precompute inverse frequencies using base^(2i/dim)
+        initialize cache for cos/sin values
+        
+    def forward(sequence_length):
+        if sequence_length not in cache:
+            compute angular positions t
+            calculate frequency components
+            store cos(t), sin(t) in cache
+        return cached cos/sin values
+
+def apply_rotary_embeddings(q, k, cos, sin):
+    split q and k vectors into halves
+    rotate components using: 
+        rotated_q = q1*cos + q2*sin
+        rotated_k = k1*cos + k2*sin
+    return concatenated rotated vectors
+
+2. Modified Attention Mechanism
+class SelfAttention:
+    def __init__():
+        # Changed from standard positional embeddings
+        add rotary embedding module
+        remove position embedding matrix
+        
+    def forward(x):
+        split into q,k,v with same head_dim
+        apply rotary embeddings to q and k
+        use scaled_dot_product_attention with rotated q/k
+        remove manual scaling (was /sqrt(24))
+        return attention output
+
+3. Layer-Wise Attention Scaling
+class TransformerBlock:
+    def __init__():
+        # Added depth-dependent scaling
+        attn_scale = 1/sqrt(2 * num_layers)
+        
+    def forward(x):
+        x += attn_scale * attention_output
+        x += mlp_output
+
+4. Simplified Model Architecture
+class GPT:
+    def __init__():
+        remove position embedding matrix (wpe)
+        keep only token embeddings (wte)
+        remove custom embedding initialization
+        
+    def forward():
+        # Position info now handled by rotary embeddings
+        use only token embeddings (no pos_emb addition)
+
+5. Training Process Improvements
+Training Hyperparameters:
+    batch_size: 32 → 64
+    total_batch_size: 262k → 524k tokens
+    add warmdown phase after constant LR period
+    
+Optimization Changes:
+    replace gradient clipping with:
+        grad = grad / (norm + 1e-6)
+    implement linear warmdown schedule
+    add periodic model checkpoint saving
+    
+Learning Rate Schedule:
+    if step < warmup: linear increase
+    elif step < total - warmdown: constant
+    else: linear decrease to zero
+
+Key Impacts:
+- Rotary embeddings improve position awareness in attention
+- Layer-wise scaling stabilizes deep networks
+- Modified LR schedule enables better convergence
+- Gradient normalization replaces clipping for stability
+- Larger batches improve training efficiency

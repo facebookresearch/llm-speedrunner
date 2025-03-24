@@ -1,0 +1,15 @@
+
+🚀 New NanoGPT training speed record: 3.28 validation loss in 15.2 mins (was 22.3 mins)! Key upgrades:
+1. Embedding padding (+22% speed) 
+2. ReLU² activation
+3. Zero-init projections
+4. QK normalization
+All credits to community collab! #AI #Efficiency #DeepLearning
+
+⚡ Padding embeddings to 64-byte alignment gives 22% speed boost! Simple change from @karpathy's playbook dramatically improves memory efficiency. Sometimes old tricks are gold! #Optimization #PyTorch
+
+🔥 Swapped GELU for ReLU² activation - 4% faster training with SQUARED nonlinearity! Inspired by Google's "Primer" paper. Who knew x² could be so powerful? #MLInnovation #NeuralNetworks
+
+✨ Magic initialization: Zero-init projections + QK-norm cut 9% training time! Thanks to Tensor Programs V insights and community contributors. Sometimes less really is more! #AIResearch
+
+🎉 34% faster convergence overall! Combined optimizations from @Grad62304977 & @SKYLINEZ007 prove the power of open collaboration. Next stop: even bigger models! #OpenScience #MachineLearning

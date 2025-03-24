@@ -219,7 +219,7 @@ class ScienceRunner:
         metrics['private'] = private_metrics
 
         # Update meta based on whether job failed or failed to produce usable metrics
-        if not metrics['is_valid'] or job_results.status == slurm_utils.JobStatus.FAILED:  # Update meta
+        if job_results.status == slurm_utils.JobStatus.FAILED or not metrics['is_valid']:  # Update meta
             self.workspace.mark_as_buggy_from_version(
                 version=version, 
                 from_version=version_info.parent_version

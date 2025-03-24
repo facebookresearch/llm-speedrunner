@@ -1,0 +1,12 @@
+
+🧵 Introducing major upgrades to NanoGPT training efficiency! 🚀 Key improvements:
+
+1️⃣ **New #MuonOptimizer** slashes memory use by 50% vs AdamW while adding just 3% time/step! 💾⚡ Combines Nesterov momentum with fast Newton-Schulz orthogonalization for better convergence. #AI #MachineLearning
+
+2️⃣ Achieved record 3.28 validation loss in **3.7B tokens** - 26% fewer than prior 5B benchmark! 📉 Training speed boosted through optimized parameter updates and bfloat16 math. #DeepLearning
+
+3️⃣ Hybrid optimization strategy: 🧠 AdamW for head layer + Muon for transformer blocks! ✨ Custom CombinedOptimizer handles mixed precision training automatically. #NeuralNets
+
+4️⃣ Memory optimizations let us scale to larger models - peak usage down 50% with smarter gradient handling! 🚀 Newton-Schulz iterations run in bfloat16 without accuracy loss. #AIOptimization
+
+5️⃣ Full torch.compile integration + reworked attention scaling 📈 delivers 10-15% speed boost vs previous implementation. PyTorch 2.0 features maximized for modern GPUs! #PyTorch

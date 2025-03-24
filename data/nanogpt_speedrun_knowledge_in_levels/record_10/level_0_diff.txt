@@ -1,0 +1,104 @@
+diff --git a/temp_current.py b/temp_next.py
+index 948ac8e..b76777b 100644
+--- a/temp_current.py
++++ b/temp_next.py
+@@ -41,8 +41,8 @@ def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
+         X = X.T
+     for _ in range(steps):
+         A = X @ X.T
+-        B = A @ X
+-        X = a * X + b * B + c * A @ B
++        B = b * A + c * A @ A # adapted from suggestion by @jxbz, @leloykun, and @YouJiacheng
++        X = a * X + B @ X
+     if G.size(0) > G.size(1):
+         X = X.T
+     return X
+@@ -150,8 +150,6 @@ def apply_rotary_emb(x, cos, sin):
+     return torch.cat([y1, y2], 3).type_as(x)
+ 
+ class CastedLinear(nn.Linear):
+-    def __init__(self, *args, **kwargs):
+-        super().__init__(*args, **kwargs)
+     def forward(self, x):
+         return F.linear(x, self.weight.to(x.dtype))
+ 
+@@ -237,6 +235,13 @@ class GPT(nn.Module):
+             wte = nn.Embedding(config.vocab_size, config.n_embd),
+             h = nn.ModuleList([Block(config) for _ in range(config.n_layer)]),
+         ))
++
++        # U-net design by @brendanh0gan
++        self.encoder_layers = config.n_layer // 2 # Half of the layers for encoder
++        self.decoder_layers = config.n_layer - self.encoder_layers # Remaining for decoder
++        # Add learnable skip connection weights for decoder layers
++        self.skip_weights = nn.Parameter(torch.ones(self.decoder_layers))
++
+         self.lm_head = CastedLinear(config.n_embd, config.vocab_size, bias=False)
+         self.lm_head.weight.data.zero_() # @Grad62304977
+ 
+@@ -247,10 +252,23 @@ class GPT(nn.Module):
+         x = F.rms_norm(x, (x.size(-1),)) # @Grad62304977
+         x0 = x
+         v1 = None
+-        for block in self.transformer.h:
+-            x, v1 = block(x, v1, x0)
+-        x = F.rms_norm(x, (x.size(-1),))
+ 
++        # Store outputs for U-Net skip connections
++        skip_connections = []
++
++        # Encoder pass - process only the first half of the blocks
++        for i in range(self.encoder_layers):
++            x, v1 = self.transformer.h[i](x, v1, x0)
++            skip_connections.append(x)  # Store the output for skip connections
++
++        # Decoder pass - process the remaining blocks with weighted skip connections
++        for i in range(self.decoder_layers):
++            skip_connection = skip_connections.pop()  # Get the corresponding encoder output
++            # Apply learnable weight to skip connection
++            weighted_skip = self.skip_weights[i] * skip_connection
++            x, v1 = self.transformer.h[self.encoder_layers + i](x + weighted_skip, v1, x0)
++
++        x = F.rms_norm(x, (x.size(-1),))
+         logits = self.lm_head(x)
+         logits = 30 * torch.tanh(logits / 30) # @Grad62304977
+         logits = logits.float()
+@@ -345,9 +363,9 @@ class Hyperparameters:
+     batch_size : int = 8*64 # batch size, in sequences, across all devices
+     device_batch_size : int = 64 # batch size, in sequences, per device
+     sequence_length : int = 1024 # sequence length, in tokens
+-    num_iterations : int = 3242 # number of iterations to run
++    num_iterations : int = 3000 # number of iterations to run
+     warmup_iters : int = 0
+-    warmdown_iters : int = 926 # number of iterations of linear warmup/warmdown for triangular or trapezoidal schedule
++    warmdown_iters : int = 900 # number of iterations of linear warmup/warmdown for triangular or trapezoidal schedule
+     weight_decay : float = 0
+     # evaluation and logging hyperparams
+     val_loss_every : int = 125 # every how many steps to evaluate val loss? 0 for only at the end
+@@ -390,6 +408,7 @@ model = model.cuda().bfloat16()
+ for m in model.modules():
+     if isinstance(m, CastedLinear):
+         m.float()
++
+ if hasattr(config, "coordinate_descent_tuning"):
+     config.coordinate_descent_tuning = True # suggested by @Chillee
+ model = torch.compile(model)
+@@ -405,13 +424,13 @@ enable_mem_efficient_sdp(False)
+ enable_math_sdp(False)
+ 
+ # init the optimizer(s)
+-optimizer1 = torch.optim.Adam([raw_model.transformer.wte.weight], lr=0.3,   betas=(0.9, 0.95), fused=True)
+-optimizer2 = torch.optim.Adam([raw_model.lm_head.weight],         lr=0.002, betas=(0.9, 0.95), fused=True)
++optimizer1 = torch.optim.Adam([raw_model.transformer.wte.weight], lr=0.6,   betas=(0.9, 0.95), fused=True)
++optimizer2 = torch.optim.Adam([raw_model.lm_head.weight],         lr=0.008, betas=(0.9, 0.95), fused=True)
+ params = list(raw_model.transformer.h.parameters())
+ matrix_params = [p for p in params if p.ndim == 2]
+-scalar_params = [p for p in params if p.ndim < 2]
+-optimizer3 = Muon(matrix_params,           lr=0.02,  momentum=0.95)
+-optimizer4 = torch.optim.Adam(scalar_params, lr=0.02, betas=(0.9, 0.95), fused=True) # note that this learning rate is neither sensitive nor tuned
++scalar_params = [p for p in params if p.ndim < 2]+[raw_model.skip_weights]
++optimizer3 = Muon(matrix_params, lr=0.04, momentum=0.95)
++optimizer4 = torch.optim.Adam(scalar_params, lr=0.04, betas=(0.9, 0.95), fused=True) # note that this learning rate is neither sensitive nor tuned
+ optimizers = [optimizer1, optimizer2, optimizer3, optimizer4]
+ # learning rate decay scheduler (linear warmup and warmdown)
+ def get_lr(it):

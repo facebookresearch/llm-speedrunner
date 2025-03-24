@@ -1,0 +1,56 @@
+
+# Pseudo Code Changes
+
+// --- Distributed Training Enhancements in Muon Optimizer ---
+Algorithm Muon.step() changes:
+1. Distributed parameter processing:
+   FOR each parameter group:
+     ALLOCATE flat buffer for aggregated updates
+     CALCULATE each GPU's assigned parameters using (param_index % world_size == rank)
+     
+     // Processing local parameters
+     FOR each assigned parameter:
+         COMPUTE momentum-adjusted gradient
+         APPLY orthogonalization backend (e.g., Newton-Schulz)
+         SCALE update based on matrix dimensions
+         STORE in flat buffer
+     
+     // Global synchronization
+     PERFORM all-reduce operation across GPUs to sum updates
+     
+     // Uniform parameter update
+     FOR all parameters (regardless of GPU assignment):
+         EXTRACT update from synchronized flat buffer
+         APPLY scaled learning rate update
+
+Purpose/Impact:
+- Enables multi-GPU training via parameter sharding and all-reduce
+- Reduces communication overhead through flat buffer strategy
+- Maintains identical update application across all devices
+
+// --- Attention Layer Modification ---
+Algorithm CausalSelfAttention.forward() changes:
+BEFORE:
+    APPLY rotary positional embeddings
+    THEN APPLY RMS normalization to Q/K
+
+AFTER:
+    APPLY RMS normalization to Q/K
+    THEN APPLY rotary positional embeddings
+
+Purpose/Impact:
+- Changes order of normalization vs positional encoding
+- Potentially improves training stability by normalizing before rotary transform
+- Aligns with latest research findings on attention mechanics
+
+// --- Optimizer Initialization Changes ---
+Algorithm training setup:
+INITIALIZE Muon optimizer with:
+   - rank from distributed process ID
+   - world_size from total GPU count
+   - 10% base learning rate compared to AdamW
+
+Purpose/Impact:
+- Integrates with PyTorch Distributed Data Parallel (DDP)
+- Allows different learning rates for transformer blocks vs head
+- Enables hybrid optimizer strategy (AdamW + custom Muon)

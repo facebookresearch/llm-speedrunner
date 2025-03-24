@@ -1,0 +1,29 @@
+
+🚀 New #NanoGPT speed record: 3.28 val loss in 3.8 mins! Key optimizations:
+1️⃣ Split Value Embeddings enabling early All-Reduce
+2️⃣ Block-level sliding window mask (+@KoszarskyB's GQA support)
+3️⃣ Separate full/partial block masks 🧠
+35% faster attention! #AI #Optimization
+
+🔥 Major memory win: DDP now uses gradient_as_bucket_view=True + parameter grouping by size! 
+📉 Reduced peak memory by 18% through smarter value embedding architecture (@leloykun's U-Net design). 
+💡 Enables longer sequences on same hardware! #PyTorch #Efficiency
+
+⚡ BlockMask 2.0 lands with:
+- Full block document masking (no mod checks)
+- Optimized kernel for partial blocks
+- 27% fewer instructions in attention core
+Combined with @Chillee's inductor configs → 4.3s/iter → 3.2s/iter! 🚀 #LLM #GPUOptimization
+
+🧩 Revolutionary training tricks:
+- Linear warmup for Muon optimizer momentum (0.85→0.95)
+- 64→1792 block sliding window schedule
+- Skipped guard evaluations post-step 5
+Cuts 600ms/iteration through compiler magic! ⚡ #MLOps #PyTorch
+
+🎯 Precision improvements:
+- 30x tanh logit softcap stabilized training
+- RMSNorm consistently applied pre-residual
+- Coord descent tuning enabled in @torch.compile
+All while maintaining 16-bit precision! 💎 
+#DeepLearning #AIModels
