@@ -1,0 +1,11 @@
+# FP8 head, offset logits, lr decay to 0.1 instead of 0.0
+
+
+## Twitter
+
+New NanoGPT training speed record: 3.28 FineWeb val loss in 3.17 minutes
+Main changes:
+1. offset logits by +15 (~2.7s) and other misc (~3.7s) see https://x.com/YouJiacheng/status/1876649827314065783
+2. FP8 lm_head (step time↓ but 1390→1410 steps, ~6s)
+3. lr decay to 0.1× instead of 0 (→1395 steps, ~2s)
+Minor change: use all_gather_into_tensor instead of all_gather

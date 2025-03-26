@@ -1,0 +1,58 @@
+# Value and embedding skip connections, momentum warmup, logit softcap
+
+
+## Twitter
+
+
+It's a new day, and here's a new NanoGPT speedrun record: 3.28 FineWeb val loss in 8.2 minutes on 8xH100
+
+Previous record: 10.8 minutes
+Changelog:
+- architectural shortcuts
+- momentum warmup
+- tanh logit capping
+
+By @Grad62304977 and myself
+
+---
+
+Shortcuts: We tweaked the transformer architecture such that later blocks can now directly access (1) the values computed in the first block and (2) the token embedding.
+
+Let me turn it over to @Grad62304977 to describe the value shortcut.
+
+@Grad62304977:
+
+43% of the speedup in the new NanoGPT record is due to a variant of value residual learning that I developed.
+
+Value residual learning (recently proposed by https://arxiv.org/abs/2410.17897) allows all blocks in the transformer to access the values computed by the first block. The paper proposes to set `v = 0.5 * v + 0.5 * v1` in each block, where `v1` is the value computed in the first block.
+
+After I implemented this method, this reduces the loss of the previous record, when it is run for 3200 steps (the final duration of the new record) from 3.327 to 3.315.  
+
+I then found that if we make the coefficients learnable, we can get further improvements. Specifically I changed the formula to `v = lambda * v + (1 - lambda) * v1` where lambda is a learnable parameter.
+
+After that, the loss reduces further from 3.315 to 3.3065, which corresponds to a 1.7x greater performance improvement than vanilla value residual.
+
+The graph attached shows that the later blocks have a smaller lambda, which means they make greater use of the shortcut to see v1.
+
+After I got this result, @kellerjordan0 also implemented a similar shortcut allowing later blocks to directly access the embedding, which resulted in further gains.
+
+Also, I have tried adding data dependence to lambda however this seems to have a big benefit only when training for longer token duration (actually the ideal situation), but this is a definite area for potential improvements.
+
+Excited to see people try this in their models and see if this works at scale and across different setups!
+
+---
+
+Each of these changes contributes a chunk of performance. Put together they add up to a 32% speedup over the prior record.
+
+---
+
+Momentum warmup: Rather than fix the Muon optimizer's momentum at 0.95 throughout training, we warm it up over the first 500 steps from 0.85 to 0.95.
+
+
+---
+
+Tanh logit capping: We limit the logit magnitudes to ±30 via tanh clamping, following Gemma 2. arxiv.org/pdf/2408.00118
+
+
+
+

@@ -1,0 +1,61 @@
+# Introduced the Muon optimizer
+
+## Twitter
+
+New training speed record for @karpathy’s 124M-parameter NanoGPT setup: 3.28 Fineweb validation loss in 3.7B training tokens
+
+Previous record: 5B tokens
+Changelog: new optimizer
+The new optimizer is defined as follows. It is based on orthogonalizing the update given by SGD-Nesterov-momentum in an efficient way
+It uses half the memory of AdamW and takes 3% extra wallclock time per step for this setup
+The optimizer's core design decisions are:
+- For each parameter, orthogonalize the update *after* applying Nesterov momentum
+- Use a fast iterative method for the orthogonalization. Quintic Newton-Schulz works well
+- Run the iteration in bfloat16
+And
+- To minimize the number of Newton-Schulz steps, select the quintic coefficients aggressively to maximize slope at zero, even at the cost of some variance / non-convergence. There's an interesting tradeoff space here
+
+
+## Longer explaination in README
+
+```markdown
+### Provenance
+
+Many of the choices made to generate this optimizer were obtained experimentally by our pursuit of [CIFAR-10 speedrunning](https://github.com/KellerJordan/cifar10-airbench).
+In particular, we experimentally obtained the following practices:
+* Using Nesterov momentum inside the update, with orthogonalization applied after momentum.
+* Using a specifically quintic Newton-Schulz iteration as the method of orthogonalization.
+* Using non-convergent coefficients for the quintic polynomial in order to maximize slope at zero, and thereby minimize the number of necessary Newton-Schulz iterations.
+* Running the Newton-Schulz iteration in bfloat16 (whereas Shampoo implementations often compute the preconditioners in fp32 or fp64).
+
+Our use of a Newton-Schulz iteration for orthogonalization traces to [Bernstein & Newhouse (2024)](https://arxiv.org/abs/2409.20325),
+who suggested it as a way to compute Shampoo [5, 6] preconditioners, and theoretically explored Shampoo without preconditioner accumulation.
+In particular, Jeremy Bernstein @jxbz sent us the draft, which caused us to experiment with various Newton-Schulz iterations as the
+orthogonalization method for this optimizer.
+If we had used SVD instead of a Newton-Schulz iteration, this optimizer would have been too slow to be useful.
+Bernstein & Newhouse also pointed out that Shampoo without preconditioner accumulation is equivalent to steepest descent in the spectral norm,
+and therefore Shampoo can be thought of as a way to smooth out spectral steepest descent.
+The proposed optimizer can be thought of as a second way of smoothing spectral steepest descent, with a different set of memory and runtime tradeoffs
+compared to Shampoo.
+```
+
+
+## Pseudo code
+
+```python
+@torch.compile
+def zeroth_power_via_newtonschulz5(G, steps=5, eps=1e-7):
+    assert len(G.shape) == 2
+    a, b, c = (3.4445, -4.7750,  2.0315)
+    X = G.bfloat16() / (G.norm() + eps)
+    if G.size(0) > G.size(1):
+        X = X.T 
+    for _ in range(steps):
+        A = X @ X.T 
+        B = A @ X 
+        X = a * X + b * B + c * A @ B 
+    if G.size(0) > G.size(1):
+        X = X.T 
+    return X.to(G.dtype)
+```
+
