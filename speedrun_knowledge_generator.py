@@ -101,14 +101,11 @@ class SpeedrunAnalyzer:
         if diff == "No next record available":
             return diff
             
-        prompt = f"""Given the git diff between the current and next version and the changelog, generate a high-level pseudo code description of the changes made.
+        prompt = f"""Given the git diff between the current and next version, generate a high-level pseudo code description of the changes made.
 Focus on explaining the key algorithmic changes and improvements in a clear, concise way.
 
 Git diff:
 {diff}
-
-Changelog:
-{record.changelog}
 
 Generate pseudo code that:
 1. Describes the key algorithmic changes and improvements
