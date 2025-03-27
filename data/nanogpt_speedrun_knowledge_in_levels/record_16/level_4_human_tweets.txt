@@ -1,0 +1,10 @@
+# Sparsify value embeddings, improve rotary embeddings, drop an attn layer
+
+## Twitter
+
+New NanoGPT training speed record: 3.28 FineWeb val loss in 3.582 minutes.
+Changelog
+- Truncate RoPE: 1460 steps, 224.5s
+- ValueEmbed [0, 1, 2, 3, 4, 5, 5, 4, 3, 2, 1, 0] → [0, 1, 2, None, ..., None, 0, 1, 2]: 1470 steps, 222s
+- Remove the 8th Attention: 1490 steps, 214.9s
+

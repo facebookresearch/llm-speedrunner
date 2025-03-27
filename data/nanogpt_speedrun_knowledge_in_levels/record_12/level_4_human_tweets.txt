@@ -1,0 +1,18 @@
+# Attention window warmup
+
+## Twitter
+
+New NanoGPT training speed record: 3.28 FineWeb val loss in 4.66 minutes
+
+Previous record: 5.03 minutes
+Changelog: 
+- FlexAttention blocksize warmup
+- hyperparameter tweaks
+
+This record modifies the previous FlexAttention record by adding a warmup to the sliding window size over the course of training. Since our network can't necessarily utilize long-term connections at the start of training, this yields a pretty good boost to training speed!
+As a result of the better match between context length during training and the network's learning dynamics, we can train a bit faster! With the increased context length, we are able to remove 125 steps, making this network 6.7% more data efficient than before.
+Some of the other changes include some hyperparameter changes to accommodate the increasingly-shortening learning schedules (1750 now vs 3000 two records ago!). Lowering Adam betas 0.9->0.8 to be a bit more nimble, as well as shortening the momentum warmup in a requisite manner, as well as increasing the number of cooldown steps for the network.
+Fun fact! This is actually a spiritual port of the sequence_length warmup originally implemented in hlb_gpt earlier last year. However, this was extremely hard to do until now due to the nature of how torch.compile worked. Thanks to FlexAttention (thanks @cHHillee and folks), this was very straightforward to implement via attention masking.
+
+Great to be able to port some of that work to this speedrun and see it fly! <3 :)
+

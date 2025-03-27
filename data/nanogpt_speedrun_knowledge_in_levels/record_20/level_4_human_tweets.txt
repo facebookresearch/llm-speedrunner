@@ -1,0 +1,52 @@
+# Reduced batch size
+
+## Twitter
+
+I have another NanoGPT Speedrun record at 2.936 mins!
+
+This time around, I encountered some strange phenomenon: fp8 scales can not only affect validation loss, but also the wallclock time
+
+But before that, let's talk about the more scalable changes first:
+
+1. Reduced training sequence length (from 64*1024 to 48*1024). This was inspired by the "critical batch size" literature. The gist is:
+
+- The larger your batch size/seq length is, the more information you can gather on what the "true" gradients should be. This leads to less "noisy" gradients during training, and thus faster convergence.
+
+- However, there are diminishing returns on this: at some point, the extra cost per-step isn't worth the gradient noise reduction anymore. And you're better off with a smaller batch size/seq length in exchange for more training steps.
+
+- But as we decrease the seq length and thus increase the number of training steps, we encounter another problem: there is an irreducible per-step overhead, perhaps coming up GPU-to-GPU comms, etc. And the more you increase the training steps, the larger this irreducible overhead would be.
+
+Thus, there's an "optimal sequence length". And after a bit of binary-searching, it turns out to be around 48*1024
+
+2. Increased validation sequence length (from 64*1024 to 256*1024). This was actually Keller's idea. 
+
+Interestingly, even without rope-scaling, this helped improve the validation loss by 0.0015, allowing us to reduce training steps by 10 (or around 700 ms to 1 sec improvement).
+
+This serves as further evidence that the Long-Short Sliding-Window Attention we developed for the speedrun indeed generalizes to sequence lengths beyond what we trained it on.
+
+And finally,
+
+3. Improved fp8 scales for the LM head.
+
+For context, we don't dynamically update the fp8 scales because (1) they're relatively stable throughout training anyway and (2) doing so would incur overhead. And so, we just used a fixed set of fp8 scales.
+
+And when I updated the sequence length, I also had to update the fp8 scales. I traced the max-absolute value of the elements in the weights & gradients, and used the following formula to get the new scales:
+
+- new_weight_scale = 2 ** int(log_2(0.8 * max_fp8_e4m3 / weight_max_abs))
+- new_grad_scale = 2 ** int(log_2(0.8 * max_fp8_e5m2 / grad_max_abs))
+
+And here's where it gets weird: I thought it was only gonna improve the validation loss. But apparently, it also reduced wallclock time.
+
+What the fuck is going on?
+
+Let's focus on the grad scales because it had the most effect. The new scale is 2**19 while the old scale is 2**29
+
+And another thing to note is that the distribution of entries in gradient matrices usually follow a power-law-ish. I.e., most entries are clustered around zero while some are exponentially higher than the rest.
+
+So, the old grad scale, being higher than it should be, causes a fraction of the entries to be clamped at inf. While the new grad scale, being lower than it should be for some iterations, causes a much larger fraction of entries to be 0.
+
+So, our new scale is actually zeroing out a lot of entries in our grad matrices. And remember Horace's blog post on how it's actually faster to do matrix multiplications on more predictable matrices? I think that's what's going on here.
+
+What does this mean for large-scale, planet-wide distributed LLM training? That we don't actually need to send the entire gradient when doing all-reduces. It's fine to zero-out the small entries and just don't send them.
+
+---

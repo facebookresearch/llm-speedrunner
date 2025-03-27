@@ -1,0 +1,15 @@
+# Lower logit softcap from 30 to 15
+
+
+## Twitter
+
+New NanoGPT training speed record: 3.28 FineWeb val loss in 3.4 minutes on 8xH100
+
+Previous record: 3.58 minutes
+Change: Lowered logit softcap from 30 to 15
+
+This record was discovered by @KoszarskyB, congratulations!
+
+Speedrunner @Grad62304977 originally adopted logit softcapping from the Gemma 2 paper. The authors set their softcap to 30.0, and most likely swept across multiple values to find the optimal setting.
+
+To understand why 15.0 might be better at small-scale, it helps to notice that softcapping is a form of *structure* we are imposing on the network.
