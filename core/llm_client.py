@@ -8,9 +8,9 @@ from openai import OpenAI, AzureOpenAI
 
 
 def strip_think_tokens(text: str):
-    # return re.sub(r"<think>\n.*?\n</think>", "", text, flags=re.DOTALL)
     if '</think>' in text:
         return text.split('</think>\n\n')[1]
+    return text
 
 
 def get_model_client(
