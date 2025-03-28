@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: gpt-4o
+model_url: "https://azure-services-fair-openai1-northcentralus.azure-api.net"
