@@ -496,7 +496,7 @@ if __name__ == "__main__":
             break
 
         torch.cuda.synchronize()
-        t0 = time.time()
+        t_train_begin = time.time()
         # --------------- TRAINING SECTION BEGIN -----------------
         model.train()
         for _ in range(args.accumulation):
@@ -519,11 +519,11 @@ if __name__ == "__main__":
         # --------------- TRAINING SECTION END -------------------
         # everything that follows now is just diagnostics, prints, logging, etc.
         torch.cuda.synchronize()
-        t1 = time.time()
+        t_train_end = time.time()
 
         dist.all_reduce(train_loss, op=dist.ReduceOp.AVG)
-        tokens_per_second = ddp_world_size * B * T / (t1 - t0)
-        print0(f"step {step+1:4d}/{args.num_iterations} | train loss {train_loss.item():.4f} | lr_scale {lr_scale:.2e} | ({(t1-t0)*1000:.2f} ms | {tokens_per_second:.0f} tok/s)")
+        tokens_per_second = ddp_world_size * B * T / (t_train_end - t_train_begin)
+        print0(f"step {step+1:4d}/{args.num_iterations} | train loss {train_loss.item():.4f} | lr_scale {lr_scale:.2e} | ({(t_train_end - t_train_begin)*1000:.2f} ms | {tokens_per_second:.0f} tok/s)")
         # log training loss to logfile
         if master_process:
             with open(logfile, "a") as f:
