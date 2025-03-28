@@ -61,9 +61,7 @@ def launch_job(
                 s.bind(('', 0))  # Bind to any available port
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 return s.getsockname()[1]  # Return the port number
-        os.environ["NANOGPT_TRAIN_FILES"] = "/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_train_*.bin"
-        os.environ["NANOGPT_VAL_FILES"] = "/checkpoint/maui/minqijiang/data/fineweb10B/fineweb_val_*.bin"
-        os.environ["NANOGPT_VAL_TOKENS"] = "10485760"
+
         os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
         # Set up SLURM environment variables
@@ -90,7 +88,7 @@ def launch_job(
             command = (
                 f"torchrun --nproc_per_node={gpus_per_node} "
                 f"--rdzv_endpoint={master_addr}:{master_port} "
-                f"/home/despoinam/github/scientist/workspace_templates/nanogpt_speedrun/record_3/train_gpt2.py"
+                f"/home/despoinam/github/scientist/zscratch/train_gpt2_7_pseudo_prime.py"
             )
 
             print(f"Running command: {command}")
