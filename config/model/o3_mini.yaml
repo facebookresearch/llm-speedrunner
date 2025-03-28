@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: o3-mini
+model_url: "https://azure-services-fair-openai2-northcentralus.azure-api.net"

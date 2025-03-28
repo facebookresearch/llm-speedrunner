@@ -16,7 +16,7 @@ def strip_think_tokens(text: str):
 def get_model_client(
     model_url: str, 
     api_key: str,
-    api_version='2024-10-21', 
+    api_version='2024-12-01-preview', 
     timeout=30*60
 ) -> Union[OpenAI, AzureOpenAI]:
     if 'https://azure' in model_url:
