@@ -448,11 +448,18 @@ if __name__ == "__main__":
         with open(logfile, "w") as f:
             pass
 
+    training_time_ms = 0
+    # start the clock
+    torch.cuda.synchronize()
+    t0 = time.time()
     for step in range(args.num_iterations + 1):
         last_step = (step == args.num_iterations)
 
         # once in a while evaluate the validation dataset
         if (last_step or (args.val_loss_every > 0 and step % args.val_loss_every == 0)):
+            # stop the clock
+            torch.cuda.synchronize()
+            training_time_ms += 1000 * (time.time() - t0)
             model.eval()
             val_loader.reset()
             val_loss = 0.0
@@ -465,14 +472,21 @@ if __name__ == "__main__":
             val_loss /= args.val_max_steps
             # log val loss to console and to logfile
             print0(f"val loss {val_loss}")
-            if master_process and logfile is not None:
+            if master_process:
+                print(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms')
                 with open(logfile, "a") as f:
-                    f.write("s:%d tel:%f\n" % (step, val_loss))
+                    f.write(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms\n')
 
         # save the state of the training process
         if master_process and (last_step or (args.save_every > 0 and step % args.save_every == 0)):
+            # stop the clock
+            torch.cuda.synchronize()
+            training_time_ms += 1000 * (time.time() - t0)
             log = dict(step=step, args=args.__dict__, code=code, model=raw_model.state_dict(), optimizer=optimizer.state_dict())
             torch.save(log, 'logs/%s/state_step%06d.pt' % (run_id, step))
+            # start the clock again
+            torch.cuda.synchronize()
+            t0 = time.time()
 
         # bit confusing: we want to make sure to eval on 0th iteration
         # but also after the very last iteration. so we loop for step <= num_iterations
