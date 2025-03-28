@@ -476,6 +476,9 @@ if __name__ == "__main__":
                 print(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms')
                 with open(logfile, "a") as f:
                     f.write(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms\n')
+            # start the clock again
+            torch.cuda.synchronize()
+            t0 = time.time()
 
         # save the state of the training process
         if master_process and (last_step or (args.save_every > 0 and step % args.save_every == 0)):
