@@ -1,0 +1,17 @@
+# U-net pattern value embeddings, assorted code optimizations
+
+
+## Twitter
+
+
+New NanoGPT training speed record: 3.28 FineWeb val loss in 3.95 minutes
+
+Previous record: 4.41 minutes
+Changelog:
+- @leloykun arch optimization: ~17s
+- remove "dead" code: ~1.5s
+- re-implement dataloader: ~2.5s
+- re-implement Muon: ~1s
+- manual block_mask creation: ~5s
+
+

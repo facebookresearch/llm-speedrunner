@@ -1,0 +1,17 @@
+# Value Embeddings
+
+## Twitter
+
+New NanoGPT training speed record: 3.28 FineWeb val loss in 4.41 minutes
+
+Previous record: 4.66 minutes 
+Changelog:  
+- Layerwise Token Value Embeddings
+- hyperparameter tweaks
+
+This record adds token embeddings for each layer, which get mixed into the value activations. Increases total parameter count by 463M while only increasing active parameters by 9216 per token. 
+
+Results in a ~12.5% reduction in total steps, while slightly increasing step time.
+
+I expect this to scale quite while, as the per step overhead stems from communication speed (embedding layer all-reduce). This only increases linearly with hidden dim, while per-step flops increase ~quadratically with hidden dim.
+

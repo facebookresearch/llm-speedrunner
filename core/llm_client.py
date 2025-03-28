@@ -101,6 +101,8 @@ class LLMClient:
 
         if not show_thinking:
             final_res = strip_think_tokens(res_content).strip()
+        else:
+            final_res = res_content
 
         if self._log_metrics:
             self._log.append(
@@ -116,26 +118,30 @@ class LLMClient:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python llm_client.py <vllm server node_id> <prompt>")
+    if len(sys.argv) != 4:
+        print("Usage: python llm_client.py <model_url> <model_name> <api_key>")
         sys.exit(1)
 
-    node_id = sys.argv[1]
-    model_url = f"http://{node_id}.fair-aws-h100-2.hpcaas:8000/v1"
+    model_url = sys.argv[1]
     print(f'model_url={model_url}')
 
-    llm = LLMClient(model_url=model_url, log_metrics=True)
+    api_key = sys.argv[3]
 
-    prompt = sys.argv[2]
+    model_name = sys.argv[2]
+    llm = LLMClient(model_url=model_url, model_name=model_name, log_metrics=True, api_key=api_key)
 
-    for _ in range(10):
+
+    # for _ in range(10):
+    while True:
+        prompt = input("Enter prompt: ")
         res = llm.generate(
             prompt, 
-            system_prompt='Respond as if you are Shrek.', 
-            show_thinking=False
+            # system_prompt='Respond as if you are Shrek.', 
+            show_thinking=True
         )
 
-        print(res)
+        print("RESPONSE:\n", res)
+        # print(res)
 
-    llm.flush_logs('journal.jsonl')
+    # llm.flush_logs('journal.jsonl')
 

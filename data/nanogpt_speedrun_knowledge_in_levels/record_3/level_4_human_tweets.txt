@@ -1,0 +1,10 @@
+# Muon improvements
+
+New training speed record for @karpathy's NanoGPT setup: 3.28 Fineweb val loss in 22.3 minutes
+
+Previous record: 24.9 minutes
+Changelog:
+- Removed learning rate warmup, since the optimizer (Muon) doesn't need it
+- Rescaled Muon's weight updates to have unit variance per param
+- Split the shared QKV weight before orthogonalizing, following @bozavlado's suggestion
+- Doubled the learning rate for the embedding layer, which is optimized by regular AdamW
