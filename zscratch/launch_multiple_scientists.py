@@ -46,7 +46,7 @@ def run_scientist_aide(
 
     task_name = "nanogpt_10112024"
     model_name = "deepseek_r1"
-    n_iterations = 100
+    n_iterations = 3
     cmd = [
         "python",
         f"launch_scientist.py",
@@ -86,6 +86,7 @@ def main():
             timeout_min=3*24*60,  # Convert hours to minutes.
             slurm_account="maui",
             slurm_qos="maui_high",
+            array_parallelism=2,
         )
     jobs = []
     with executor.batch():
