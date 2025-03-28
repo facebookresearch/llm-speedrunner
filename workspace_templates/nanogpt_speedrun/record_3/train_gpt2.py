@@ -448,18 +448,11 @@ if __name__ == "__main__":
         with open(logfile, "w") as f:
             pass
 
-    training_time_ms = 0
-    # start the clock
-    torch.cuda.synchronize()
-    t0 = time.time()
     for step in range(args.num_iterations + 1):
         last_step = (step == args.num_iterations)
 
         # once in a while evaluate the validation dataset
         if (last_step or (args.val_loss_every > 0 and step % args.val_loss_every == 0)):
-            # stop the clock
-            torch.cuda.synchronize()
-            training_time_ms += 1000 * (time.time() - t0)
             model.eval()
             val_loader.reset()
             val_loss = 0.0
@@ -472,24 +465,14 @@ if __name__ == "__main__":
             val_loss /= args.val_max_steps
             # log val loss to console and to logfile
             print0(f"val loss {val_loss}")
-            if master_process:
-                print(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms')
+            if master_process and logfile is not None:
                 with open(logfile, "a") as f:
-                    f.write(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms\n')
-            # start the clock again
-            torch.cuda.synchronize()
-            t0 = time.time()
+                    f.write("s:%d tel:%f\n" % (step, val_loss))
 
         # save the state of the training process
         if master_process and (last_step or (args.save_every > 0 and step % args.save_every == 0)):
-            # stop the clock
-            torch.cuda.synchronize()
-            training_time_ms += 1000 * (time.time() - t0)
             log = dict(step=step, args=args.__dict__, code=code, model=raw_model.state_dict(), optimizer=optimizer.state_dict())
             torch.save(log, 'logs/%s/state_step%06d.pt' % (run_id, step))
-            # start the clock again
-            torch.cuda.synchronize()
-            t0 = time.time()
 
         # bit confusing: we want to make sure to eval on 0th iteration
         # but also after the very last iteration. so we loop for step <= num_iterations
@@ -499,7 +482,7 @@ if __name__ == "__main__":
             break
 
         torch.cuda.synchronize()
-        t_train_begin = time.time()
+        t0 = time.time()
         # --------------- TRAINING SECTION BEGIN -----------------
         model.train()
         for _ in range(args.accumulation):
@@ -522,11 +505,11 @@ if __name__ == "__main__":
         # --------------- TRAINING SECTION END -------------------
         # everything that follows now is just diagnostics, prints, logging, etc.
         torch.cuda.synchronize()
-        t_train_end = time.time()
+        t1 = time.time()
 
         dist.all_reduce(train_loss, op=dist.ReduceOp.AVG)
-        tokens_per_second = ddp_world_size * B * T / (t_train_end - t_train_begin)
-        print0(f"step {step+1:4d}/{args.num_iterations} | train loss {train_loss.item():.4f} | lr_scale {lr_scale:.2e} | ({(t_train_end - t_train_begin)*1000:.2f} ms | {tokens_per_second:.0f} tok/s)")
+        tokens_per_second = ddp_world_size * B * T / (t1 - t0)
+        print0(f"step {step+1:4d}/{args.num_iterations} | train loss {train_loss.item():.4f} | lr_scale {lr_scale:.2e} | ({(t1-t0)*1000:.2f} ms | {tokens_per_second:.0f} tok/s)")
         # log training loss to logfile
         if master_process:
             with open(logfile, "a") as f:
