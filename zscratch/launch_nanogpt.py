@@ -9,7 +9,6 @@ def launch_job(
     cpus_per_task: int,
     gpus_per_node: int,
     tasks_per_node: int,
-    gpu_mem: int,
     timeout_min: int,
     job_name: str,
     account: str,
@@ -89,7 +88,7 @@ def launch_job(
             command = (
                 f"torchrun --nproc_per_node={gpus_per_node} "
                 f"--rdzv_endpoint={master_addr}:{master_port} "
-                f"train_gpt.py"
+                f"/home/despoinam/github/scientist/zscratch/train_gpt2_7_pseudo_prime.py"
             )
 
             print(f"Running command: {command}")
@@ -103,11 +102,6 @@ def launch_job(
 
 
 if __name__ == '__main__':
-    command = (
-        "torchrun "
-        "--nproc_per_node=8 "
-        "train_gpt.py"
-    )
     launch_job(
         job_name='nanogpt',
         nodes=1,
@@ -116,5 +110,5 @@ if __name__ == '__main__':
         tasks_per_node=8,
         timeout_min=60,
         account='maui',
-        # qos='maui_high',
+        qos='maui_high',
     )
