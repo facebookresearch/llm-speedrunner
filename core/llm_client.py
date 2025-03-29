@@ -9,7 +9,7 @@ from openai import OpenAI, AzureOpenAI
 
 def strip_think_tokens(text: str):
     if '</think>' in text:
-        return text.split('</think>\n\n')[1]
+        return re.sub(r"(?:<think>)?.*?</think>", "", text, flags=re.DOTALL)
     return text
 
 

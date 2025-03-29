@@ -55,7 +55,7 @@ workspace_args:
     - coder_history.jsonl
     - aider.txt
     - meta.json
-    # - results.json
+    - results.json
     - cache
     - preview_resources.txt
     - "*grading_report.json" 
