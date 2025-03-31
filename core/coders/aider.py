@@ -15,7 +15,8 @@ from core.workspace import Workspace
 
 NAME_TO_AIDER_MODEL_NAME = {
     'o1-preview': 'azure/o1-preview',
-    'gpt-4o': 'azure/gpt-4o'
+    'gpt-4o': 'azure/gpt-4o',
+    'o3-mini': 'azure/o3-mini'
 }
 
 
@@ -28,9 +29,9 @@ def get_aider_model_name(model_name: str) -> str:
 
 
 def set_env_vars_for_model(model_name: str, model_url: Optional[str] = None, secrets: Optional[dict[str, str]] = None):
-    if model_name in ['o1-preview', 'gpt-4o']:
+    if model_name in ['o1-preview', 'gpt-4o', 'o3-mini']:
         os.environ['AZURE_API_BASE'] = model_url
-        os.environ['AZURE_API_VERSION'] = '2024-10-21'
+        os.environ['AZURE_API_VERSION'] = '2024-12-01-preview'
         if secrets:
             for k, v in secrets.items():
                 if k.endswith('AZURE_API_KEY'):
