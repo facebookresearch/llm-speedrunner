@@ -42,7 +42,7 @@ def run_scientist_with_knowledge(
         f"n_iterations={n_iterations}",
         f"ideator={ideator}",
         f"science_runner={science_runner}",
-        f'knowledge_src_paths={knowledge_path}',
+        f'knowledge_src_paths=[{knowledge_path}]',
     ]
 
     print("Running command:", " ".join(cmd))
