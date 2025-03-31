@@ -27,7 +27,7 @@ def run_scientist_with_knowledge(
 
     if multiple_knowledge_paths:
         knowledge_paths = []
-        for i in range(knowledge_level):
+        for i in range(knowledge_level+1):
             knowledge_paths.append(f"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{i}_*.txt")
         # join by , and ""
         knowledge_path = ",".join(f'"{path}"' for path in knowledge_paths)
