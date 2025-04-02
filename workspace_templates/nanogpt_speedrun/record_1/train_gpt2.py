@@ -342,6 +342,10 @@ if __name__ == "__main__":
 
     timings = []
     norm = -1.0   # dummy value to print in inference-only mode
+    training_time_ms = 0
+    # start the clock
+    torch.cuda.synchronize()
+    t_val_loss_0 = time.time()
     for step in range(args.num_iterations + 1):
         t0 = time.time()
         last_step = (step == args.num_iterations)
@@ -350,6 +354,9 @@ if __name__ == "__main__":
         if (args.val_loss_every > 0 \
             and (step % args.val_loss_every == 0 or last_step)) \
             and (val_loader is not None):
+            # stop the clock
+            torch.cuda.synchronize()
+            training_time_ms += 1000 * (time.time() - t_val_loss_0)
             model.eval()
             val_loader.reset()
             with torch.no_grad():
@@ -361,9 +368,13 @@ if __name__ == "__main__":
                 val_loss /= args.val_max_steps
             # log to console and to file
             print0(f"val loss {val_loss}")
-            if master_process and logfile is not None:
+            if master_process:
+                print(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms')
                 with open(logfile, "a") as f:
-                    f.write("s:%d tel:%f\n" % (step, val_loss))
+                    f.write(f'step:{step}/{args.num_iterations} val_loss:{val_loss:.4f} train_time:{training_time_ms:.0f}ms\n')
+            # start the clock again
+            torch.cuda.synchronize()
+            t_val_loss_0 = time.time()
 
         # bit confusing: we want to make sure to eval on 0th iteration
         # but also after the very last iteration. so we loop for step <= num_iterations
