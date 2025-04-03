@@ -72,6 +72,8 @@ class AiderCoder(Agent):
         main_model = Model(aider_model_name)
         if use_temperature is not None:
             main_model.use_temperature = use_temperature
+            if model_name in ['o1-preview', 'o3-mini']:
+                main_model.use_temperature = False
 
         self._coder = Coder.create(
             main_model=main_model,
@@ -98,6 +100,7 @@ class AiderCoder(Agent):
         workspace: Workspace,
         version: int,
         bug_history: Optional[str] = None,
+        knowledge: Optional[str] = None,
         max_retries=1
     ) -> str:
         # Update history file
@@ -132,3 +135,51 @@ class AiderCoder(Agent):
 
     def flush_logs(self, path: str):
         pass
+
+class AiderKnowledgeCoder(AiderCoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def code(
+        self, 
+        task_description: str,
+        instruction: Optional[str],
+        ideas: Optional[str],
+        fnames: str | list[str],
+        workspace: Workspace,
+        version: int,
+        bug_history: Optional[str] = None,
+        knowledge: Optional[str] = None,
+        max_retries=1
+    ) -> str:
+        # Update history file
+        aider_txt_path = workspace.resolve_path('aider.txt', version=version)
+        self._coder.io.chat_history_file = Path(aider_txt_path)
+
+        # Add code paths
+        abs_fnames = [
+            workspace.resolve_path(fname, version=version)
+            for fname in fnames
+        ]
+
+        self._coder.abs_fnames.clear()
+        for fname in abs_fnames:
+            self._coder.abs_fnames.add(fname)
+
+        code_prompt = coder_prompts.knowledge_code_prompt(
+            task_description=task_description,
+            instruction=instruction,
+            ideas=ideas,
+            fnames=fnames,
+            packages=workspace.packages,
+            bug_history=bug_history,
+            knowledge=knowledge
+        )
+        
+        coder_out = self._coder.run(code_prompt)
+
+        if self._coder.summarizer_thread:
+            self._coder.summarizer_thread.join()
+
+        return coder_out
+
