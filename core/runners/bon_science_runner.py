@@ -110,7 +110,7 @@ class BoNScienceRunner(ScienceRunner):
                 workspace=self.workspace,
                 version=version,
                 bug_history=bug_history,
-                knowledge=self.knowledge.search(as_string=True) if self.knowledge_pass_to_coder else None,
+                knowledge=None if not self.knowledge_pass_to_coder else self.knowledge.search(as_string=True),
                 max_retries=self.max_retries
             )
         )
