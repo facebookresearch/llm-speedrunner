@@ -439,7 +439,7 @@ if __name__ == "__main__":
             timings.append(t1-t0)
 
         if master_process and (args.save_every > 0 and step % args.save_every == 0):
-            log = dict(model=raw_model.state_dict(), code=code, args=args.__dict__)
+            log = dict(code=code, args=args.__dict__)
             os.makedirs('logs/%s' % run_id, exist_ok=True)
             torch.save(log, 'logs/%s/model_step%06d.pt' % (run_id, step))
 
@@ -451,7 +451,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
 
     if master_process:
-        log = dict(model=raw_model.state_dict(), code=code, args=args.__dict__)
+        log = dict(code=code, args=args.__dict__)
         os.makedirs('logs/%s' % run_id, exist_ok=True)
         torch.save(log, 'logs/%s/final.pt' % run_id)
 

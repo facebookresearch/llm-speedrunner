@@ -471,7 +471,7 @@ if __name__ == "__main__":
 
         # save the state of the training process
         if master_process and (last_step or (args.save_every > 0 and step % args.save_every == 0)):
-            log = dict(step=step, args=args.__dict__, code=code, model=raw_model.state_dict(), optimizer=optimizer.state_dict())
+            log = dict(step=step, args=args.__dict__, code=code)
             torch.save(log, 'logs/%s/state_step%06d.pt' % (run_id, step))
 
         # bit confusing: we want to make sure to eval on 0th iteration

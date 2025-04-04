@@ -525,7 +525,7 @@ for step in range(train_steps + 1):
 
     if last_step:
         if master_process and args.save_checkpoint:
-            log = dict(step=step, code=code, model=model.state_dict(), optimizers=[opt.state_dict() for opt in optimizers])
+            log = dict(step=step, code=code)
             os.makedirs(f'logs/{run_id}', exist_ok=True)
             torch.save(log, f'logs/{run_id}/state_step{step:06d}.pt')
         # the last step only has the validation loop, so break to avoid training
