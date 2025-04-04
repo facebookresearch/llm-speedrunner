@@ -36,7 +36,8 @@ class BoNScienceRunner(ScienceRunner):
         n_initial_hypotheses=1,
         debug_prob=0.0,
         max_bug_depth: Optional[int] = 3,
-        knowledge_src_paths: Optional[list[str]] = None
+        knowledge_src_paths: Optional[list[str]] = None,
+        knowledge_pass_to_coder: bool = False
     ):
         super().__init__(
             config=config,
@@ -56,6 +57,7 @@ class BoNScienceRunner(ScienceRunner):
         self.max_bug_depth = max_bug_depth
 
         self.knowledge = KnowledgeStore(src_paths=knowledge_src_paths)
+        self.knowledge_pass_to_coder = knowledge_pass_to_coder
 
     def _job_callback(
         self,
@@ -108,7 +110,7 @@ class BoNScienceRunner(ScienceRunner):
                 workspace=self.workspace,
                 version=version,
                 bug_history=bug_history,
-                knowledge=self.knowledge.search(as_string=True),
+                knowledge=self.knowledge.search(as_string=True) if self.knowledge_pass_to_coder else None,
                 max_retries=self.max_retries
             )
         )

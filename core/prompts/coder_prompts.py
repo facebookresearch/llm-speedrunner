@@ -44,8 +44,7 @@ def basic_code_prompt(
 	code: Optional[str] = None,
 	packages: Optional[list[str]] = None,
 	bug_history: Optional[str] = None,
-	knowledge: Optional[str] = None,
-	use_knowledge: bool = False
+	knowledge: Optional[str] = None
 ):
 	if len(fnames) == 1:
 		fnames = fnames[0]
@@ -60,7 +59,7 @@ def basic_code_prompt(
 	if instruction:
 		instructions.append(instruction + '\n')
 
-	if use_knowledge:
+	if knowledge:
 		instructions.append(
 			KNOWLEDGE_INFO_COMPONENT.format(knowledge=knowledge)
 		)

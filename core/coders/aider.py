@@ -56,8 +56,7 @@ class AiderCoder(Agent):
         detect_urls=False,
         use_temperature: Union[bool, float] = False,
         abs_read_only_fnames: Optional[list[str]] = None,
-        secrets: Optional[dict[str, str]] = None,
-        use_knowledge: bool = False
+        secrets: Optional[dict[str, str]] = None
     ):
         if system_prompt:
             logging.info('Currently, system prompt for AiderCoder is ignored.')
@@ -91,8 +90,6 @@ class AiderCoder(Agent):
         if secrets:
             for k, v in secrets.items():
                 os.environ[k] = v
-
-        self._use_knowledge = use_knowledge
 
     def code(
         self, 
@@ -128,7 +125,6 @@ class AiderCoder(Agent):
             packages=workspace.packages,
             bug_history=bug_history,
             knowledge=knowledge,
-            use_knowledge=self._use_knowledge
         )
         
         coder_out = self._coder.run(code_prompt)
