@@ -1,7 +1,0 @@
-# @package _global_
-
-defaults:
-  - aider
-
-coder_args:
-  _target_: core.coders.aider.AiderKnowledgeCoder
