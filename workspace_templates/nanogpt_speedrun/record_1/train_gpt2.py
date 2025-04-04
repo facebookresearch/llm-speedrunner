@@ -427,7 +427,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------
 
     if master_process:
-        log = dict(model=raw_model.state_dict(), code=code, args=args.__dict__)
+        log = dict(code=code, args=args.__dict__)
         os.makedirs('logs', exist_ok=True)
         torch.save(log, 'logs/%s.pt' % run_id)
 

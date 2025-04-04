@@ -13,7 +13,8 @@ import submitit
 import argparse
 import itertools
 import ipdb
-def run_scientist_with_knowledge(
+
+def generate_cmd(
     record_number: int,
     model_name: str = "deepseek_r1",
     n_iterations: int = 10,
@@ -26,10 +27,8 @@ def run_scientist_with_knowledge(
     aide_max_bug_depth: int = 50,
     knowledge_level: str = "0",
     no_knowledge: bool = False,
+    pass_coder_knowledge: bool = False,
 ):
-    cwd = os.getcwd()
-    print("[INFO] Running in directory:", cwd)
-
     # wrap with ""
     knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
     cmd = [
@@ -52,7 +51,15 @@ def run_scientist_with_knowledge(
 
     if not no_knowledge:
         cmd.append(f'knowledge_src_paths=[{knowledge_path}]')
+    
+    if pass_coder_knowledge:
+        cmd.append(f'science_runner_args.knowledge_pass_to_coder=True')
 
+    return cmd
+
+def worker(cmd: list[str]):
+    cwd = os.getcwd()
+    print("[INFO] Running in directory:", cwd)
     print("Running command:", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
@@ -72,6 +79,7 @@ def main():
     parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
     parser.add_argument("--no_knowledge", type=bool, default=False, help="Whether or not no knowledge")
+    parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
     args = parser.parse_args()
     
     executor = submitit.AutoExecutor(folder="submitit_logs")
@@ -88,15 +96,13 @@ def main():
     jobs = []
     if args.no_knowledge:
         args.knowledge_level = [-1]
-    
-    with executor.batch():
-        iterator = itertools.product(
-            args.record_numbers,
-            args.knowledge_level,
-        )
-        for record_number, knowledge_level in iterator:
-            job = executor.submit(
-                run_scientist_with_knowledge,
+    iterator = list(itertools.product(
+        args.record_numbers,
+        args.knowledge_level,
+    ))
+    print(f"Generating {len(iterator)} commands")
+    for record_number, knowledge_level in iterator:
+        cmd = generate_cmd(
                 record_number=record_number,
                 model_name=args.model_name,
                 n_iterations=args.n_iterations,
@@ -109,6 +115,30 @@ def main():
                 aide_max_bug_depth=args.aide_max_bug_depth,
                 knowledge_level=knowledge_level,
                 no_knowledge=args.no_knowledge,
+                pass_coder_knowledge=args.pass_coder_knowledge,
+            )
+        print(" ".join(cmd))
+    input("Press Enter to continue")
+    
+    with executor.batch():
+        for record_number, knowledge_level in iterator:
+            job = executor.submit(
+                worker,
+                generate_cmd(
+                    record_number=record_number,
+                    model_name=args.model_name,
+                    n_iterations=args.n_iterations,
+                    ideator=args.ideator,
+                    science_runner=args.science_runner,
+                    bon_n_hypotheses=args.bon_n_hypotheses,
+                    aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
+                    aide_n_hypotheses=args.aide_n_hypotheses,
+                    aide_debug_prob=args.aide_debug_prob,
+                    aide_max_bug_depth=args.aide_max_bug_depth,
+                    knowledge_level=knowledge_level,
+                    no_knowledge=args.no_knowledge,
+                    pass_coder_knowledge=args.pass_coder_knowledge,
+                )
             )
             jobs.append(job)
 
