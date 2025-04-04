@@ -56,7 +56,8 @@ class AiderCoder(Agent):
         detect_urls=False,
         use_temperature: Union[bool, float] = False,
         abs_read_only_fnames: Optional[list[str]] = None,
-        secrets: Optional[dict[str, str]] = None
+        secrets: Optional[dict[str, str]] = None,
+        use_knowledge: bool = False
     ):
         if system_prompt:
             logging.info('Currently, system prompt for AiderCoder is ignored.')
@@ -91,6 +92,8 @@ class AiderCoder(Agent):
             for k, v in secrets.items():
                 os.environ[k] = v
 
+        self._use_knowledge = use_knowledge
+
     def code(
         self, 
         task_description: str,
@@ -123,7 +126,9 @@ class AiderCoder(Agent):
             ideas=ideas,
             fnames=fnames,
             packages=workspace.packages,
-            bug_history=bug_history
+            bug_history=bug_history,
+            knowledge=knowledge,
+            use_knowledge=self._use_knowledge
         )
         
         coder_out = self._coder.run(code_prompt)
@@ -135,51 +140,3 @@ class AiderCoder(Agent):
 
     def flush_logs(self, path: str):
         pass
-
-class AiderKnowledgeCoder(AiderCoder):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def code(
-        self, 
-        task_description: str,
-        instruction: Optional[str],
-        ideas: Optional[str],
-        fnames: str | list[str],
-        workspace: Workspace,
-        version: int,
-        bug_history: Optional[str] = None,
-        knowledge: Optional[str] = None,
-        max_retries=1
-    ) -> str:
-        # Update history file
-        aider_txt_path = workspace.resolve_path('aider.txt', version=version)
-        self._coder.io.chat_history_file = Path(aider_txt_path)
-
-        # Add code paths
-        abs_fnames = [
-            workspace.resolve_path(fname, version=version)
-            for fname in fnames
-        ]
-
-        self._coder.abs_fnames.clear()
-        for fname in abs_fnames:
-            self._coder.abs_fnames.add(fname)
-
-        code_prompt = coder_prompts.knowledge_code_prompt(
-            task_description=task_description,
-            instruction=instruction,
-            ideas=ideas,
-            fnames=fnames,
-            packages=workspace.packages,
-            bug_history=bug_history,
-            knowledge=knowledge
-        )
-        
-        coder_out = self._coder.run(code_prompt)
-
-        if self._coder.summarizer_thread:
-            self._coder.summarizer_thread.join()
-
-        return coder_out
-
