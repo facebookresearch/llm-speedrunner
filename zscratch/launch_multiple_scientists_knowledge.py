@@ -19,8 +19,14 @@ def run_scientist_with_knowledge(
     n_iterations: int = 10,
     ideator: str = "dummy",
     science_runner: str = "bon",
+    bon_n_hypotheses: int = 1,
+    aide_n_initial_hypotheses: int = 1,
+    aide_n_hypotheses: int = 1,
+    aide_debug_prob: float = 1.0,
+    aide_max_bug_depth: int = 50,
     knowledge_level: int = 0,
     multiple_knowledge_paths: bool = False,
+    no_knowledge: bool = False,
 ):
     cwd = os.getcwd()
     print("[INFO] Running in directory:", cwd)
@@ -42,8 +48,18 @@ def run_scientist_with_knowledge(
         f"n_iterations={n_iterations}",
         f"ideator={ideator}",
         f"science_runner={science_runner}",
-        f'knowledge_src_paths=[{knowledge_path}]',
     ]
+
+    if science_runner == 'bon':
+        cmd.append(f"science_runner_args.n_hypotheses={bon_n_hypotheses}")
+    elif science_runner == 'aide':
+        cmd.append(f"science_runner_args.n_initial_hypotheses={aide_n_initial_hypotheses}")
+        cmd.append(f"science_runner_args.n_hypotheses={aide_n_hypotheses}")
+        cmd.append(f"science_runner_args.debug_prob={aide_debug_prob}")
+        cmd.append(f"science_runner_args.max_bug_depth={aide_max_bug_depth}")
+
+    if not no_knowledge:
+        cmd.append(f'knowledge_src_paths=[{knowledge_path}]')
 
     print("Running command:", " ".join(cmd))
     subprocess.run(cmd, check=True)
@@ -56,8 +72,15 @@ def main():
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
     parser.add_argument("--science_runner", type=str, default="bon", help="Science runner to use")
+    parser.add_argument("--bon_n_hypotheses", type=int, default=3, help="Number of hypotheses for BON")
+    parser.add_argument("--aide_n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses for AIDE")
+    parser.add_argument("--aide_n_hypotheses", type=int, default=1, help="Number of hypotheses for AIDE")
+    parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
+    parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
     parser.add_argument("--knowledge_level", type=int, nargs='+', default=[0, 1, 2, 3, 4], help="Knowledge level to use")
     parser.add_argument("--multiple_knowledge_paths", type=bool, default=False, help="Whether to use multiple knowledge paths")
+    parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
+    parser.add_argument("--no_knowledge", type=bool, default=False, help="Whether or not no knowledge")
     args = parser.parse_args()
     
     executor = submitit.AutoExecutor(folder="submitit_logs")
@@ -69,8 +92,11 @@ def main():
             timeout_min=3*24*60,  # 3 days
             slurm_account="maui",
             slurm_qos="maui_high",
+            array_parallelism=args.array_parallelism,
         )
     jobs = []
+    if args.no_knowledge:
+        args.knowledge_level = [-1]
     
     with executor.batch():
         iterator = itertools.product(
@@ -85,8 +111,14 @@ def main():
                 n_iterations=args.n_iterations,
                 ideator=args.ideator,
                 science_runner=args.science_runner,
+                bon_n_hypotheses=args.bon_n_hypotheses,
+                aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
+                aide_n_hypotheses=args.aide_n_hypotheses,
+                aide_debug_prob=args.aide_debug_prob,
+                aide_max_bug_depth=args.aide_max_bug_depth,
                 knowledge_level=knowledge_level,
                 multiple_knowledge_paths=args.multiple_knowledge_paths,
+                no_knowledge=args.no_knowledge,
             )
             jobs.append(job)
 
@@ -94,4 +126,4 @@ def main():
         print("Job ID:", job.job_id, "State:", job.state)
 
 if __name__ == "__main__":
-    main() 
+    main()
