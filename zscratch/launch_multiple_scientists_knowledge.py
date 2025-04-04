@@ -24,22 +24,14 @@ def run_scientist_with_knowledge(
     aide_n_hypotheses: int = 1,
     aide_debug_prob: float = 1.0,
     aide_max_bug_depth: int = 50,
-    knowledge_level: int = 0,
-    multiple_knowledge_paths: bool = False,
+    knowledge_level: str = "0",
     no_knowledge: bool = False,
 ):
     cwd = os.getcwd()
     print("[INFO] Running in directory:", cwd)
 
-    if multiple_knowledge_paths:
-        knowledge_paths = []
-        for i in range(knowledge_level+1):
-            knowledge_paths.append(f"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{i}_*.txt")
-        # join by , and ""
-        knowledge_path = ",".join(f'"{path}"' for path in knowledge_paths)
-    else:
-        # wrap with ""
-        knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
+    # wrap with ""
+    knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
     cmd = [
         "python",
         f"launch_scientist.py",
@@ -77,8 +69,7 @@ def main():
     parser.add_argument("--aide_n_hypotheses", type=int, default=1, help="Number of hypotheses for AIDE")
     parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
-    parser.add_argument("--knowledge_level", type=int, nargs='+', default=[0, 1, 2, 3, 4], help="Knowledge level to use")
-    parser.add_argument("--multiple_knowledge_paths", type=bool, default=False, help="Whether to use multiple knowledge paths")
+    parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
     parser.add_argument("--no_knowledge", type=bool, default=False, help="Whether or not no knowledge")
     args = parser.parse_args()
@@ -117,7 +108,6 @@ def main():
                 aide_debug_prob=args.aide_debug_prob,
                 aide_max_bug_depth=args.aide_max_bug_depth,
                 knowledge_level=knowledge_level,
-                multiple_knowledge_paths=args.multiple_knowledge_paths,
                 no_knowledge=args.no_knowledge,
             )
             jobs.append(job)
