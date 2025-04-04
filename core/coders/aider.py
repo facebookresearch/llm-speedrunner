@@ -72,6 +72,8 @@ class AiderCoder(Agent):
         main_model = Model(aider_model_name)
         if use_temperature is not None:
             main_model.use_temperature = use_temperature
+            if model_name in ['o1-preview', 'o3-mini']:
+                main_model.use_temperature = False
 
         self._coder = Coder.create(
             main_model=main_model,
@@ -98,6 +100,7 @@ class AiderCoder(Agent):
         workspace: Workspace,
         version: int,
         bug_history: Optional[str] = None,
+        knowledge: Optional[str] = None,
         max_retries=1
     ) -> str:
         # Update history file
@@ -120,7 +123,8 @@ class AiderCoder(Agent):
             ideas=ideas,
             fnames=fnames,
             packages=workspace.packages,
-            bug_history=bug_history
+            bug_history=bug_history,
+            knowledge=knowledge,
         )
         
         coder_out = self._coder.run(code_prompt)

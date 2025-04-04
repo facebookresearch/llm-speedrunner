@@ -16,6 +16,10 @@ PACKAGE_INFO_COMPONENT= """**Never** install or ask to install any additional pa
 If necessary, you may access pretrained model checkpoints via HuggingFace for smaller models like BERT variants or CLIP.
 """
 
+KNOWLEDGE_INFO_COMPONENT = """You have access to the following knowledge, consider these when writing code:
+{knowledge}
+"""
+
 
 BASIC_CODE_PROMPT = """Your goal is to implement the following ideas to improve the code so that it better achieves the task:
 
@@ -40,6 +44,7 @@ def basic_code_prompt(
 	code: Optional[str] = None,
 	packages: Optional[list[str]] = None,
 	bug_history: Optional[str] = None,
+	knowledge: Optional[str] = None
 ):
 	if len(fnames) == 1:
 		fnames = fnames[0]
@@ -53,6 +58,12 @@ def basic_code_prompt(
 	instructions = [task_description + '\n']
 	if instruction:
 		instructions.append(instruction + '\n')
+
+	if knowledge:
+		instructions.append(
+			KNOWLEDGE_INFO_COMPONENT.format(knowledge=knowledge)
+		)
+
 	if packages:
 		package_list = '\n'.join([f'- {x}' for x in packages])
 		instructions.append(

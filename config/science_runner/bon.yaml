@@ -14,3 +14,4 @@ science_runner_args:
   n_hypotheses: 1
 
   knowledge_src_paths: ${knowledge_src_paths}
+  knowledge_pass_to_coder: False
