@@ -57,7 +57,21 @@ def generate_cmd(
 
     return cmd
 
-def worker(cmd: list[str]):
+def get_slurm_id() -> str:
+    slurm_id = []
+    env_var_names = ["SLURM_JOB_ID", "SLURM_ARRAY_TASK_ID"]
+    for var_name in env_var_names:
+        if var_name in os.environ:
+            slurm_id.append(str(os.environ[var_name]))
+            print(f"[DEBUG] Environment variable {var_name}: {str(os.environ[var_name])}")
+    if slurm_id:
+        return "-".join(slurm_id)
+    return "-1"
+
+def worker(cmd: list[str], workspace_path: Optional[str] = None):
+    slurm_job_id = get_slurm_id()
+    augmented_workspace_path = workspace_path + f"_{slurm_job_id}"
+    cmd.append(f"workspace_args.root_path={augmented_workspace_path}")
     cwd = os.getcwd()
     print("[INFO] Running in directory:", cwd)
     print("Running command:", " ".join(cmd))
@@ -84,7 +98,7 @@ def main():
     
     # /checkpoint/maui/despoinam/scientist/workspace/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
     root_workspace_path = "/checkpoint/maui/despoinam/scientist/workspace/"
-    executor = submitit.AutoExecutor(folder="submitit_logs")
+    executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
     executor.update_parameters(
             name=args.job_name,
             nodes=1,
@@ -95,6 +109,7 @@ def main():
             slurm_qos="maui_high",
             array_parallelism=args.array_parallelism,
         )
+    # workspace_path = f"{root_workspace_path}record_0_%j"
     jobs = []
     if args.no_knowledge:
         args.knowledge_level = [-1]
@@ -122,15 +137,18 @@ def main():
         print(" ".join(cmd))
     input("Press Enter to continue")
     
-    now = datetime.datetime.now()
-    workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
-    print(f"[INFO] Creating workspace at: {workspace_path}")
-            
+    
+    
+    workspace_path = f"{root_workspace_path}record_0_%j"
+    # executor.update_parameters(output_dir=workspace_path)
     with executor.batch():
         for record_number, knowledge_level in iterator:
-            os.makedirs(workspace_path, exist_ok=True)
+            print(f"[INFO] Creating workspace at: {workspace_path}")
+            # os.makedirs(workspace_path, exist_ok=True)
             # executor.update_parameters(name=workspace_path)
-            print("Slurm job id:" + "/%j")
+            now = datetime.datetime.now()
+            workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
+            # print("Slurm job id:" + "/%j")
             job = executor.submit(
                 worker,
                 generate_cmd(
@@ -147,7 +165,8 @@ def main():
                     knowledge_level=knowledge_level,
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
-                )
+                ),
+                workspace_path
             )
             jobs.append(job)
 
