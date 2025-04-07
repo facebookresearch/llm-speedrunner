@@ -12,7 +12,6 @@ import subprocess
 import submitit
 import argparse
 import itertools
-import ipdb
 import datetime
 
 def generate_cmd(
@@ -127,7 +126,9 @@ def main():
         for record_number, knowledge_level in iterator:
             now = datetime.datetime.now()
             workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
-            executor.update_folder(workspace_path)
+            print(f"[INFO] Creating workspace at: {workspace_path}")
+            os.makedirs(workspace_path, exist_ok=True)
+            executor.update_parameters(output_dir=workspace_path)
             job = executor.submit(
                 worker,
                 generate_cmd(
