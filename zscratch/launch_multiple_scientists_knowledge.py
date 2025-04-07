@@ -13,6 +13,7 @@ import submitit
 import argparse
 import itertools
 import ipdb
+import datetime
 
 def generate_cmd(
     record_number: int,
@@ -82,6 +83,8 @@ def main():
     parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
     args = parser.parse_args()
     
+    # /checkpoint/maui/despoinam/scientist/workspace/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
+    root_workspace_path = "/checkpoint/maui/despoinam/scientist/workspace/"
     executor = submitit.AutoExecutor(folder="submitit_logs")
     executor.update_parameters(
             name=args.job_name,
@@ -122,6 +125,9 @@ def main():
     
     with executor.batch():
         for record_number, knowledge_level in iterator:
+            now = datetime.datetime.now()
+            workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
+            executor.update_folder(workspace_path)
             job = executor.submit(
                 worker,
                 generate_cmd(
