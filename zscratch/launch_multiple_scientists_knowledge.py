@@ -122,13 +122,15 @@ def main():
         print(" ".join(cmd))
     input("Press Enter to continue")
     
+    now = datetime.datetime.now()
+    workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
+    print(f"[INFO] Creating workspace at: {workspace_path}")
+            
     with executor.batch():
         for record_number, knowledge_level in iterator:
-            now = datetime.datetime.now()
-            workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
-            print(f"[INFO] Creating workspace at: {workspace_path}")
             os.makedirs(workspace_path, exist_ok=True)
-            executor.update_parameters(output_dir=workspace_path)
+            # executor.update_parameters(name=workspace_path)
+            print("Slurm job id:" + "/%j")
             job = executor.submit(
                 worker,
                 generate_cmd(
