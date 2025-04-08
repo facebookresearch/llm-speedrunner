@@ -39,7 +39,6 @@ def generate_cmd(
     no_knowledge: bool = False,
     pass_coder_knowledge: bool = False,
     aider_edit_format: str = "diff",
-    strict_diff_format: bool = False,
 ):
     # wrap with ""
     knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
@@ -52,7 +51,6 @@ def generate_cmd(
         f"ideator={ideator}",
         f"science_runner={science_runner}",
         f"coder_args.edit_format={aider_edit_format}",
-        f"coder_args.strict_diff_format={strict_diff_format}",
     ]
 
     if science_runner == 'bon':
@@ -111,7 +109,6 @@ def main():
     parser.add_argument("--no_knowledge", type=str2bool, default=False, help="Whether or not no knowledge")
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
-    parser.add_argument("--strict_diff_format", type=str2bool, default=False, help="Whether or not to use strict diff format")
     args = parser.parse_args()
     
     username = os.getlogin()
@@ -152,7 +149,6 @@ def main():
                 no_knowledge=args.no_knowledge,
                 pass_coder_knowledge=args.pass_coder_knowledge,
                 aider_edit_format=args.aider_edit_format,
-                strict_diff_format=args.strict_diff_format,
             )
         print(" ".join(cmd))
     input("Press Enter to continue")
@@ -178,7 +174,6 @@ def main():
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
                     aider_edit_format=args.aider_edit_format,
-                    strict_diff_format=args.strict_diff_format,
                 ),
                 workspace_path_prefix
             )

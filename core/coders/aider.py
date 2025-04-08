@@ -52,7 +52,6 @@ class AiderCoder(Agent):
         log_llm_metrics=False,
         stream=False,
         edit_format='diff',
-        strict_diff_format=False,
         max_reflections=5,
         detect_urls=False,
         use_temperature: Union[bool, float] = False,
@@ -84,7 +83,6 @@ class AiderCoder(Agent):
             edit_format=edit_format,
             summarize_from_coder=True,
         )
-        self.strict_diff_format = strict_diff_format # this is used to enforce the model to follow the diff format strictly
         self._coder.max_reflections = max_reflections
         self._coder.detect_urls = detect_urls
         self._coder.abs_read_only_fnames = abs_read_only_fnames
@@ -128,7 +126,8 @@ class AiderCoder(Agent):
             bug_history=bug_history,
             knowledge=knowledge,
         )
-        if self.strict_diff_format:
+        if self._coder.edit_format == 'diff':
+            # add strict diff prompt to ensure the model follows the diff format strictly
             code_prompt += coder_prompts.STRICT_DIFF_PROMPT
         
         coder_out = self._coder.run(code_prompt)
