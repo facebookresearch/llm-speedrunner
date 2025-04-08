@@ -43,7 +43,7 @@ class OrthogonalNesterov(torch.optim.Optimizer):
 
 @torch.compile
 def zeroth_power_via_newtonschulz5(G, steps=5, eps=1e-7):
-    """
+    r"""
     Newton-Schulz iteration to compute the zeroth power / orthogonalization of G. We opt to use a
     quintic iteration whose coefficients are selected to maximize the slope at zero. It turns out
     to be empirically effective to keep increasing the slope of the quintic at zero even beyond the
