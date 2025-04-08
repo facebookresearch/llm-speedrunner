@@ -71,7 +71,7 @@ def get_slurm_id() -> str:
 def worker(cmd: list[str], workspace_path: Optional[str] = None):
     slurm_job_id = get_slurm_id()
     augmented_workspace_path = workspace_path + f"_{slurm_job_id}"
-    cmd.append(f"workspace_args.root_path={augmented_workspace_path}_%j")
+    cmd.append(f"workspace_args.root_path={augmented_workspace_path}")
     cwd = os.getcwd()
     for key, value in os.environ.items():
         print(f"[ENV] {key}: {value}")
