@@ -33,11 +33,13 @@ I trust you to make good decisions, so do not ask me for permission to make any 
 Do not ever ask to install any additional packages. The answer will be no.
 
 In your final response, include ONLY the fully-functional updated code which implements ideas in the hypothesis above. Do NOT include any other content in your final response besides the code.
-
-You will edit the code using the diff format, when generating the diff, make sure the generated SEARCH block will **EXACTLY** match the code you will edit.
-Do not skip any lines, and do not change any indentation.
 """
 
+STRICT_DIFF_PROMPT = """
+You will edit the code using the diff format, when generating the diff, make sure the generated SEARCH block will **EXACTLY** match the code you will edit.
+Do not skip any lines especially in the SEARCH block as missing anything will results in the code not being edited.
+Do not change any indentation, the SEARCH block should have the same indentation as the code you will edit, otherwise the code will not be edited.
+"""
 
 def basic_code_prompt(
 	task_description: str, 
