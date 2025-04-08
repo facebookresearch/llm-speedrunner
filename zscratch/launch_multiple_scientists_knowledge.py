@@ -59,7 +59,7 @@ def generate_cmd(
 
 def get_slurm_id() -> str:
     slurm_id = []
-    env_var_names = ["SLURM_JOB_ID", "SLURM_ARRAY_TASK_ID"]
+    env_var_names = ["SLURM_ARRAY_JOB_ID", "SLURM_ARRAY_TASK_ID"]
     for var_name in env_var_names:
         if var_name in os.environ:
             slurm_id.append(str(os.environ[var_name]))
@@ -71,8 +71,10 @@ def get_slurm_id() -> str:
 def worker(cmd: list[str], workspace_path: Optional[str] = None):
     slurm_job_id = get_slurm_id()
     augmented_workspace_path = workspace_path + f"_{slurm_job_id}"
-    cmd.append(f"workspace_args.root_path={augmented_workspace_path}")
+    cmd.append(f"workspace_args.root_path={augmented_workspace_path}_%j")
     cwd = os.getcwd()
+    for key, value in os.environ.items():
+        print(f"[ENV] {key}: {value}")
     print("[INFO] Running in directory:", cwd)
     print("Running command:", " ".join(cmd))
     subprocess.run(cmd, check=True)
@@ -96,7 +98,6 @@ def main():
     parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
     args = parser.parse_args()
     
-    # /checkpoint/maui/despoinam/scientist/workspace/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
     root_workspace_path = "/checkpoint/maui/despoinam/scientist/workspace/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
     executor.update_parameters(
@@ -109,7 +110,6 @@ def main():
             slurm_qos="maui_high",
             array_parallelism=args.array_parallelism,
         )
-    # workspace_path = f"{root_workspace_path}record_0_%j"
     jobs = []
     if args.no_knowledge:
         args.knowledge_level = [-1]
@@ -139,16 +139,10 @@ def main():
     
     
     
-    workspace_path = f"{root_workspace_path}record_0_%j"
-    # executor.update_parameters(output_dir=workspace_path)
     with executor.batch():
         for record_number, knowledge_level in iterator:
-            print(f"[INFO] Creating workspace at: {workspace_path}")
-            # os.makedirs(workspace_path, exist_ok=True)
-            # executor.update_parameters(name=workspace_path)
             now = datetime.datetime.now()
-            workspace_path = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S_%f}"
-            # print("Slurm job id:" + "/%j")
+            workspace_path_prefix = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S}"
             job = executor.submit(
                 worker,
                 generate_cmd(
@@ -166,7 +160,7 @@ def main():
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
                 ),
-                workspace_path
+                workspace_path_prefix
             )
             jobs.append(job)
 
