@@ -98,7 +98,8 @@ def main():
     parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
     args = parser.parse_args()
     
-    root_workspace_path = "/checkpoint/maui/despoinam/scientist/workspace/"
+    username = os.getlogin()
+    root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
     executor.update_parameters(
             name=args.job_name,
@@ -108,7 +109,7 @@ def main():
             timeout_min=3*24*60,  # 3 days
             slurm_account="maui",
             slurm_qos="maui_high",
-            array_parallelism=args.array_parallelism,
+            slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []
     if args.no_knowledge:
@@ -118,6 +119,7 @@ def main():
         args.knowledge_level,
     ))
     print(f"Generating {len(iterator)} commands")
+    print(f"Root workspace path: {root_workspace_path}")
     for record_number, knowledge_level in iterator:
         cmd = generate_cmd(
                 record_number=record_number,
@@ -136,8 +138,6 @@ def main():
             )
         print(" ".join(cmd))
     input("Press Enter to continue")
-    
-    
     
     with executor.batch():
         for record_number, knowledge_level in iterator:
