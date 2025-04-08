@@ -14,6 +14,16 @@ import argparse
 import itertools
 import datetime
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def generate_cmd(
     record_number: int,
     model_name: str = "deepseek_r1",
@@ -96,8 +106,8 @@ def main():
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
     parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
-    parser.add_argument("--no_knowledge", type=bool, default=False, help="Whether or not no knowledge")
-    parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
+    parser.add_argument("--no_knowledge", type=str2bool, default=False, help="Whether or not no knowledge")
+    parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
     args = parser.parse_args()
     
