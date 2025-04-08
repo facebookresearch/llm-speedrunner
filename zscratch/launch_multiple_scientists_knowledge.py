@@ -12,7 +12,7 @@ import subprocess
 import submitit
 import argparse
 import itertools
-import ipdb
+import datetime
 
 def generate_cmd(
     record_number: int,
@@ -57,8 +57,24 @@ def generate_cmd(
 
     return cmd
 
-def worker(cmd: list[str]):
+def get_slurm_id() -> str:
+    slurm_id = []
+    env_var_names = ["SLURM_ARRAY_JOB_ID", "SLURM_ARRAY_TASK_ID"]
+    for var_name in env_var_names:
+        if var_name in os.environ:
+            slurm_id.append(str(os.environ[var_name]))
+            print(f"[DEBUG] Environment variable {var_name}: {str(os.environ[var_name])}")
+    if slurm_id:
+        return "-".join(slurm_id)
+    return "-1"
+
+def worker(cmd: list[str], workspace_path: Optional[str] = None):
+    slurm_job_id = get_slurm_id()
+    augmented_workspace_path = workspace_path + f"_{slurm_job_id}"
+    cmd.append(f"workspace_args.root_path={augmented_workspace_path}")
     cwd = os.getcwd()
+    for key, value in os.environ.items():
+        print(f"[ENV] {key}: {value}")
     print("[INFO] Running in directory:", cwd)
     print("Running command:", " ".join(cmd))
     subprocess.run(cmd, check=True)
@@ -82,7 +98,9 @@ def main():
     parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
     args = parser.parse_args()
     
-    executor = submitit.AutoExecutor(folder="submitit_logs")
+    username = os.getlogin()
+    root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/"
+    executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
     executor.update_parameters(
             name=args.job_name,
             nodes=1,
@@ -91,7 +109,7 @@ def main():
             timeout_min=3*24*60,  # 3 days
             slurm_account="maui",
             slurm_qos="maui_high",
-            array_parallelism=args.array_parallelism,
+            slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []
     if args.no_knowledge:
@@ -101,6 +119,7 @@ def main():
         args.knowledge_level,
     ))
     print(f"Generating {len(iterator)} commands")
+    print(f"Root workspace path: {root_workspace_path}")
     for record_number, knowledge_level in iterator:
         cmd = generate_cmd(
                 record_number=record_number,
@@ -122,6 +141,8 @@ def main():
     
     with executor.batch():
         for record_number, knowledge_level in iterator:
+            now = datetime.datetime.now()
+            workspace_path_prefix = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S}"
             job = executor.submit(
                 worker,
                 generate_cmd(
@@ -138,7 +159,8 @@ def main():
                     knowledge_level=knowledge_level,
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
-                )
+                ),
+                workspace_path_prefix
             )
             jobs.append(job)
 
