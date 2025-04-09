@@ -14,6 +14,16 @@ import argparse
 import itertools
 import datetime
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 def generate_cmd(
     record_number: int,
     model_name: str = "deepseek_r1",
@@ -28,6 +38,7 @@ def generate_cmd(
     knowledge_level: str = "0",
     no_knowledge: bool = False,
     pass_coder_knowledge: bool = False,
+    aider_edit_format: str = "diff",
 ):
     # wrap with ""
     knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
@@ -39,6 +50,7 @@ def generate_cmd(
         f"n_iterations={n_iterations}",
         f"ideator={ideator}",
         f"science_runner={science_runner}",
+        f"coder_args.edit_format={aider_edit_format}",
     ]
 
     if science_runner == 'bon':
@@ -59,7 +71,7 @@ def generate_cmd(
 
 def get_slurm_id() -> str:
     slurm_id = []
-    env_var_names = ["SLURM_ARRAY_JOB_ID", "SLURM_ARRAY_TASK_ID"]
+    env_var_names = ["SLURM_JOB_ID", "SLURM_ARRAY_JOB_ID", "SLURM_ARRAY_TASK_ID"]
     for var_name in env_var_names:
         if var_name in os.environ:
             slurm_id.append(str(os.environ[var_name]))
@@ -94,8 +106,9 @@ def main():
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
     parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
-    parser.add_argument("--no_knowledge", type=bool, default=False, help="Whether or not no knowledge")
-    parser.add_argument("--pass_coder_knowledge", type=bool, default=False, help="Whether or not to pass coder knowledge")
+    parser.add_argument("--no_knowledge", type=str2bool, default=False, help="Whether or not no knowledge")
+    parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
+    parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
     args = parser.parse_args()
     
     username = os.getlogin()
@@ -106,7 +119,7 @@ def main():
             nodes=1,
             tasks_per_node=1,
             cpus_per_task=32,
-            timeout_min=3*24*60,  # 3 days
+            timeout_min=6*24*60,  # 6 days
             slurm_account="maui",
             slurm_qos="maui_high",
             slurm_array_parallelism=args.array_parallelism,
@@ -135,6 +148,7 @@ def main():
                 knowledge_level=knowledge_level,
                 no_knowledge=args.no_knowledge,
                 pass_coder_knowledge=args.pass_coder_knowledge,
+                aider_edit_format=args.aider_edit_format,
             )
         print(" ".join(cmd))
     input("Press Enter to continue")
@@ -159,6 +173,7 @@ def main():
                     knowledge_level=knowledge_level,
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
+                    aider_edit_format=args.aider_edit_format,
                 ),
                 workspace_path_prefix
             )

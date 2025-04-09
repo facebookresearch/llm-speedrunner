@@ -126,6 +126,9 @@ class AiderCoder(Agent):
             bug_history=bug_history,
             knowledge=knowledge,
         )
+        if self._coder.edit_format == 'diff':
+            # add strict diff prompt to ensure the model follows the diff format strictly
+            code_prompt += coder_prompts.STRICT_DIFF_PROMPT
         
         coder_out = self._coder.run(code_prompt)
 
