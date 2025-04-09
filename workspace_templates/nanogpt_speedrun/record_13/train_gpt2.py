@@ -28,7 +28,7 @@ def zeropower_via_svd(G, steps=None):
 
 @torch.compile
 def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
-    """
+    r"""
     Newton-Schulz iteration to compute the zeroth power / orthogonalization of G. We opt to use a
     quintic iteration whose coefficients are selected to maximize the slope at zero. For the purpose
     of minimizing steps, it turns out to be empirically effective to keep increasing the slope at
@@ -54,7 +54,7 @@ def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
 zeropower_backends = dict(svd=zeropower_via_svd, newtonschulz5=zeropower_via_newtonschulz5)
 
 class Muon(torch.optim.Optimizer):
-    """
+    r"""
     Muon - MomentUm Orthogonalized by Newton-schulz
 
     Muon internally runs standard SGD-momentum, and then performs an orthogonalization post-
