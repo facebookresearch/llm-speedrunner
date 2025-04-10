@@ -90,7 +90,7 @@ def launch_job(
             command = (
                 f"torchrun --nproc_per_node={gpus_per_node} "
                 f"--rdzv_endpoint={master_addr}:{master_port} "
-                f"/home/despoinam/github/scientist/workspace_templates/nanogpt_speedrun/record_1/train_gpt2.py"
+                f"/home/despoinam/github/scientist/workspace_templates/nanogpt_speedrun/record_3/train_gpt2.py"
             )
 
             print(f"Running command: {command}")
@@ -112,5 +112,5 @@ if __name__ == '__main__':
         tasks_per_node=8,
         timeout_min=60,
         account='maui',
-        qos='maui_high',
+        qos='dev',
     )
