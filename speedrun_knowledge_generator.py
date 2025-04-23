@@ -159,6 +159,29 @@ Use hashtags and emojis where appropriate.
 Keep each tweet under 280 characters."""
 
         return self.llm.generate(prompt)
+    
+    def generate_paper_like_level_5(self, record: SpeedrunRecord) -> str:
+        """Generate a paper-like summary of the improvements."""
+        prompt = f"""Given the current code, changelog, and next code, pseudo codes and text description, generate a formal paper-like summary of the improvements.
+Current code:
+{record.code}
+
+Changelog:
+{record.changelog}
+
+Next code:
+{record.next_code}
+
+Pseudo code:
+{self.generate_level_1(record)}
+
+Text description:
+{self.generate_level_2(record)}
+
+Use this text description and pseudocode changes to generate a body of knowledge resembling a scientific paper. You should tailor the generated scientific paper so that a competent machine learning engineer can easily implement the suggested changes in PyTorch
+Besure to include the pseudocode in the paper-like summary.
+"""
+        return self.llm.generate(prompt)
 
     def analyze_all_records(self, output_dir: str):
         """Generate all levels of analysis for all records and save to files."""
@@ -174,7 +197,8 @@ Keep each tweet under 280 characters."""
                 "level_0_diff.txt": self.generate_level_0(record),
                 "level_1_pseudo.txt": self.generate_level_1(record),
                 "level_2_description.txt": self.generate_level_2(record),
-                "level_3_tweets.txt": self.generate_level_3(record)
+                "level_3_tweets.txt": self.generate_level_3(record),
+                "level_5_paper.txt": self.generate_paper_like_level_5(record)
             }
             
             for filename, content in levels.items():
