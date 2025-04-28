@@ -27,18 +27,20 @@ def str2bool(v):
 def generate_cmd(
     record_number: int,
     model_name: str = "deepseek_r1",
+    qos: str = "maui_high",
     n_iterations: int = 10,
     ideator: str = "dummy",
     science_runner: str = "bon",
-    bon_n_hypotheses: int = 1,
-    aide_n_initial_hypotheses: int = 1,
-    aide_n_hypotheses: int = 1,
+    max_n_nodes: int = 20,
+    n_hypotheses: int = 1,
+    n_initial_hypotheses: int = 1,
     aide_debug_prob: float = 1.0,
     aide_max_bug_depth: int = 50,
     knowledge_level: str = "0",
     no_knowledge: bool = False,
     pass_coder_knowledge: bool = False,
     aider_edit_format: str = "diff",
+    strict_diff_format: bool = False,
 ):
     # wrap with ""
     knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
@@ -51,13 +53,17 @@ def generate_cmd(
         f"ideator={ideator}",
         f"science_runner={science_runner}",
         f"coder_args.edit_format={aider_edit_format}",
+        f"slurm_config_args.qos={qos}",
+        # f"coder_args.strict_diff_format={strict_diff_format}",
+        f"science_runner_args.max_n_nodes={max_n_nodes}",
     ]
 
     if science_runner == 'bon':
-        cmd.append(f"science_runner_args.n_hypotheses={bon_n_hypotheses}")
+        cmd.append(f"science_runner_args.n_hypotheses={n_hypotheses}")
+        cmd.append(f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}")
     elif science_runner == 'aide':
-        cmd.append(f"science_runner_args.n_initial_hypotheses={aide_n_initial_hypotheses}")
-        cmd.append(f"science_runner_args.n_hypotheses={aide_n_hypotheses}")
+        cmd.append(f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}")
+        cmd.append(f"science_runner_args.n_hypotheses={n_hypotheses}")
         cmd.append(f"science_runner_args.debug_prob={aide_debug_prob}")
         cmd.append(f"science_runner_args.max_bug_depth={aide_max_bug_depth}")
 
@@ -94,14 +100,15 @@ def worker(cmd: list[str], workspace_path: Optional[str] = None):
 def main():
     parser = argparse.ArgumentParser(description="Submitit launcher for scientist jobs with knowledge source paths.")
     parser.add_argument("--job_name", type=str, default="knowledge_sweep", help="Job name")
+    parser.add_argument("--qos", type=str, default="maui_high", help="Quality of service")
+    parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', required=True, help="List of record numbers to sweep over")
     parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
     parser.add_argument("--science_runner", type=str, default="bon", help="Science runner to use")
-    parser.add_argument("--bon_n_hypotheses", type=int, default=3, help="Number of hypotheses for BON")
-    parser.add_argument("--aide_n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses for AIDE")
-    parser.add_argument("--aide_n_hypotheses", type=int, default=1, help="Number of hypotheses for AIDE")
+    parser.add_argument("--n_hypotheses", type=int, default=3, help="Number of hypotheses")
+    parser.add_argument("--n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses")
     parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
     parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
@@ -109,6 +116,7 @@ def main():
     parser.add_argument("--no_knowledge", type=str2bool, default=False, help="Whether or not no knowledge")
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
+    parser.add_argument("--strict_diff_format", type=str2bool, default=False, help="Whether or not to use strict diff format")
     args = parser.parse_args()
     
     username = os.getlogin()
@@ -129,10 +137,11 @@ def main():
         args.knowledge_level = [-1]
     iterator = list(itertools.product(
         args.record_numbers,
-        args.knowledge_level,
+        [args.knowledge_level],
     ))
     print(f"Generating {len(iterator)} commands")
     print(f"Root workspace path: {root_workspace_path}")
+    
     for record_number, knowledge_level in iterator:
         cmd = generate_cmd(
                 record_number=record_number,
@@ -140,15 +149,16 @@ def main():
                 n_iterations=args.n_iterations,
                 ideator=args.ideator,
                 science_runner=args.science_runner,
-                bon_n_hypotheses=args.bon_n_hypotheses,
-                aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
-                aide_n_hypotheses=args.aide_n_hypotheses,
+                n_hypotheses=args.n_hypotheses,
+                n_initial_hypotheses=args.n_initial_hypotheses,
                 aide_debug_prob=args.aide_debug_prob,
                 aide_max_bug_depth=args.aide_max_bug_depth,
                 knowledge_level=knowledge_level,
                 no_knowledge=args.no_knowledge,
                 pass_coder_knowledge=args.pass_coder_knowledge,
                 aider_edit_format=args.aider_edit_format,
+                strict_diff_format=args.strict_diff_format,
+                max_n_nodes=args.max_n_nodes,
             )
         print(" ".join(cmd))
     input("Press Enter to continue")
@@ -165,15 +175,16 @@ def main():
                     n_iterations=args.n_iterations,
                     ideator=args.ideator,
                     science_runner=args.science_runner,
-                    bon_n_hypotheses=args.bon_n_hypotheses,
-                    aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
-                    aide_n_hypotheses=args.aide_n_hypotheses,
+                    n_hypotheses=args.n_hypotheses,
+                    n_initial_hypotheses=args.n_initial_hypotheses,
                     aide_debug_prob=args.aide_debug_prob,
                     aide_max_bug_depth=args.aide_max_bug_depth,
                     knowledge_level=knowledge_level,
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
                     aider_edit_format=args.aider_edit_format,
+                    strict_diff_format=args.strict_diff_format,
+                    max_n_nodes=args.max_n_nodes,
                 ),
                 workspace_path_prefix
             )

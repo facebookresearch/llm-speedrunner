@@ -32,6 +32,7 @@ class BoNScienceRunner(ScienceRunner):
         eval_slurm_config: Optional[SlurmConfig] = None,
         max_retries=3,
         max_log_len=30_000,
+        max_n_nodes=20,
         n_hypotheses=1,
         n_initial_hypotheses=1,
         debug_prob=0.0,
@@ -48,7 +49,8 @@ class BoNScienceRunner(ScienceRunner):
             slurm_config=slurm_config,
             eval_slurm_config=eval_slurm_config,
             max_retries=max_retries,
-            max_log_len=max_log_len
+            max_log_len=max_log_len,
+            max_n_nodes=max_n_nodes
         )
 
         self.n_hypotheses = n_hypotheses
@@ -209,6 +211,11 @@ class BoNScienceRunner(ScienceRunner):
             open_version = None
 
         for i in range(start_iter_idx, n_iterations):
+            # Check if we've reached the maximum number of nodes
+            if self.workspace.n_versions - 1 >= self.max_n_nodes:
+                logging.info(f"Maximum number of nodes ({self.max_n_nodes}) reached. Stopping runner.")
+                break
+                
             # Request next hypotheses
             relevant_history = None
             is_debugging = False
@@ -264,6 +271,11 @@ class BoNScienceRunner(ScienceRunner):
             for hyp_idx, hypothesis in enumerate(hypotheses):
                 print(f'Hypothesis:\n{hypothesis}')
 
+                # Check if we've reached the maximum number of nodes
+                if self.workspace.n_versions - 1 >= self.max_n_nodes:
+                    logging.info(f"Maximum number of nodes ({self.max_n_nodes}) reached. Skipping remaining hypotheses.")
+                    break
+
                 # Create a new workspace version for each experiment
                 if i == 0:
                     # All first generation hypotheses branch from template
@@ -274,6 +286,9 @@ class BoNScienceRunner(ScienceRunner):
                     version = self.workspace.create_version(
                         from_version=prev_version
                     )
+                
+                # Log node count
+                logging.info(f"Created node {self.workspace.n_versions - 1}/{self.max_n_nodes}")
 
                 current_versions.append(str(version))
                 version2metadata[version] = {
@@ -307,4 +322,9 @@ class BoNScienceRunner(ScienceRunner):
                 print('Waiting for evals to finish')
                 await slurm_utils.JobObserver.shared.wait()
 
+            # Check if we've reached the maximum number of nodes before selecting next version
+            if self.workspace.n_versions - 1 >= self.max_n_nodes:
+                logging.info(f"Maximum number of nodes ({self.max_n_nodes}) reached. Stopping runner.")
+                break
+                
             open_version = self.select_next_open_version(current_versions)
