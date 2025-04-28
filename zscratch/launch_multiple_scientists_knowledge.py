@@ -31,7 +31,7 @@ def generate_cmd(
     n_iterations: int = 10,
     ideator: str = "dummy",
     science_runner: str = "bon",
-    max_n_nodes: int = 100,
+    max_n_nodes: int = 20,
     n_hypotheses: int = 1,
     n_initial_hypotheses: int = 1,
     aide_debug_prob: float = 1.0,
@@ -101,7 +101,7 @@ def main():
     parser = argparse.ArgumentParser(description="Submitit launcher for scientist jobs with knowledge source paths.")
     parser.add_argument("--job_name", type=str, default="knowledge_sweep", help="Job name")
     parser.add_argument("--qos", type=str, default="maui_high", help="Quality of service")
-    parser.add_argument("--max_n_nodes", type=int, default=100, help="Maximum number of nodes to use")
+    parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', required=True, help="List of record numbers to sweep over")
     parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
