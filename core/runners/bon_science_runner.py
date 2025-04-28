@@ -32,7 +32,7 @@ class BoNScienceRunner(ScienceRunner):
         eval_slurm_config: Optional[SlurmConfig] = None,
         max_retries=3,
         max_log_len=30_000,
-        max_n_nodes=100,
+        max_n_nodes=20,
         n_hypotheses=1,
         n_initial_hypotheses=1,
         debug_prob=0.0,
