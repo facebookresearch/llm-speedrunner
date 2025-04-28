@@ -55,6 +55,7 @@ def generate_cmd(
         f"coder_args.edit_format={aider_edit_format}",
         f"slurm_config_args.qos={qos}",
         # f"coder_args.strict_diff_format={strict_diff_format}",
+        f"science_runner_args.max_n_nodes={max_n_nodes}",
     ]
 
     if science_runner == 'bon':
@@ -157,6 +158,7 @@ def main():
                 pass_coder_knowledge=args.pass_coder_knowledge,
                 aider_edit_format=args.aider_edit_format,
                 strict_diff_format=args.strict_diff_format,
+                max_n_nodes=args.max_n_nodes,
             )
         print(" ".join(cmd))
     input("Press Enter to continue")
@@ -182,6 +184,7 @@ def main():
                     pass_coder_knowledge=args.pass_coder_knowledge,
                     aider_edit_format=args.aider_edit_format,
                     strict_diff_format=args.strict_diff_format,
+                    max_n_nodes=args.max_n_nodes,
                 ),
                 workspace_path_prefix
             )
