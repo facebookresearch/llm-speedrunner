@@ -57,7 +57,6 @@ class BoNScienceRunner(ScienceRunner):
         self.n_initial_hypotheses = n_initial_hypotheses
         self.debug_prob = debug_prob
         self.max_bug_depth = max_bug_depth
-        self.node_count = 0  # Counter for tracking number of nodes created
 
         self.knowledge = KnowledgeStore(src_paths=knowledge_src_paths)
         self.knowledge_pass_to_coder = knowledge_pass_to_coder

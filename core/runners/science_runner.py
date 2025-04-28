@@ -87,6 +87,8 @@ class ScienceRunner:
         self.max_retries = max_retries
         self.max_log_len = max_log_len
         self.max_n_nodes = max_n_nodes
+        self.node_count = 0  # Counter for tracking number of nodes created
+
         # Agents
         self.assistant = assistant
         self.ideator = ideator
