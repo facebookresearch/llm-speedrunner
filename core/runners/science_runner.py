@@ -28,7 +28,8 @@ class ScienceRunner:
         slurm_config: SlurmConfig,
         eval_slurm_config: Optional[SlurmConfig] = None,
         max_retries=3,
-        max_log_len=30_000
+        max_log_len=30_000,
+        max_n_nodes=100
     ):
         self.preamble = config.preamble
         
@@ -85,7 +86,7 @@ class ScienceRunner:
 
         self.max_retries = max_retries
         self.max_log_len = max_log_len
-
+        self.max_n_nodes = max_n_nodes
         # Agents
         self.assistant = assistant
         self.ideator = ideator

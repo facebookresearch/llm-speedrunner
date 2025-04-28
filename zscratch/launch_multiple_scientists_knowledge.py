@@ -31,10 +31,9 @@ def generate_cmd(
     n_iterations: int = 10,
     ideator: str = "dummy",
     science_runner: str = "bon",
-    bon_n_hypotheses: int = 1,
-    bon_n_initial_hypotheses: int = 1,
-    aide_n_initial_hypotheses: int = 1,
-    aide_n_hypotheses: int = 1,
+    max_n_nodes: int = 100,
+    n_hypotheses: int = 1,
+    n_initial_hypotheses: int = 1,
     aide_debug_prob: float = 1.0,
     aide_max_bug_depth: int = 50,
     knowledge_level: str = "0",
@@ -59,11 +58,11 @@ def generate_cmd(
     ]
 
     if science_runner == 'bon':
-        cmd.append(f"science_runner_args.n_hypotheses={bon_n_hypotheses}")
-        cmd.append(f"science_runner_args.n_initial_hypotheses={bon_n_initial_hypotheses}")
+        cmd.append(f"science_runner_args.n_hypotheses={n_hypotheses}")
+        cmd.append(f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}")
     elif science_runner == 'aide':
-        cmd.append(f"science_runner_args.n_initial_hypotheses={aide_n_initial_hypotheses}")
-        cmd.append(f"science_runner_args.n_hypotheses={aide_n_hypotheses}")
+        cmd.append(f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}")
+        cmd.append(f"science_runner_args.n_hypotheses={n_hypotheses}")
         cmd.append(f"science_runner_args.debug_prob={aide_debug_prob}")
         cmd.append(f"science_runner_args.max_bug_depth={aide_max_bug_depth}")
 
@@ -97,34 +96,18 @@ def worker(cmd: list[str], workspace_path: Optional[str] = None):
     print("Running command:", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
-def calculate_total_nodes(science_runner, n_iterations, bon_n_hypotheses, bon_n_initial_hypotheses, 
-                         aide_n_initial_hypotheses, aide_n_hypotheses, aide_debug_prob):
-    """Calculate the total number of nodes that will be generated based on parameters."""
-    if science_runner == 'bon':
-        # For BoN: n_initial_hypotheses + (n_hypotheses × (n_iterations - 1))
-        total_nodes = bon_n_initial_hypotheses + (bon_n_hypotheses * (n_iterations - 1))
-    elif science_runner == 'aide':
-        # For AIDE: n_initial_hypotheses + (n_hypotheses × (n_iterations - 1))
-        # Note: This is a simplification as AIDE's behavior with debug_prob is more complex
-        total_nodes = aide_n_initial_hypotheses + (aide_n_hypotheses * (n_iterations - 1))
-    else:
-        total_nodes = 0
-    
-    return total_nodes
-
 def main():
     parser = argparse.ArgumentParser(description="Submitit launcher for scientist jobs with knowledge source paths.")
     parser.add_argument("--job_name", type=str, default="knowledge_sweep", help="Job name")
     parser.add_argument("--qos", type=str, default="maui_high", help="Quality of service")
+    parser.add_argument("--max_n_nodes", type=int, default=100, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', required=True, help="List of record numbers to sweep over")
     parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
     parser.add_argument("--science_runner", type=str, default="bon", help="Science runner to use")
-    parser.add_argument("--bon_n_hypotheses", type=int, default=3, help="Number of hypotheses for BON")
-    parser.add_argument("--bon_n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses for BON")
-    parser.add_argument("--aide_n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses for AIDE")
-    parser.add_argument("--aide_n_hypotheses", type=int, default=1, help="Number of hypotheses for AIDE")
+    parser.add_argument("--n_hypotheses", type=int, default=3, help="Number of hypotheses")
+    parser.add_argument("--n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses")
     parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
     parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
@@ -158,27 +141,6 @@ def main():
     print(f"Generating {len(iterator)} commands")
     print(f"Root workspace path: {root_workspace_path}")
     
-    # Calculate and print the total number of nodes that will be generated
-    total_nodes = calculate_total_nodes(
-        science_runner=args.science_runner,
-        n_iterations=args.n_iterations,
-        bon_n_hypotheses=args.bon_n_hypotheses,
-        bon_n_initial_hypotheses=args.bon_n_initial_hypotheses,
-        aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
-        aide_n_hypotheses=args.aide_n_hypotheses,
-        aide_debug_prob=args.aide_debug_prob
-    )
-    print(f"\n[INFO] Expected total nodes to be generated: {total_nodes}")
-    print(f"       This is based on: {args.science_runner} runner with {args.n_iterations} iterations")
-    if args.science_runner == 'bon':
-        print(f"       - Initial hypotheses: {args.bon_n_initial_hypotheses}")
-        print(f"       - Hypotheses per iteration: {args.bon_n_hypotheses}")
-    elif args.science_runner == 'aide':
-        print(f"       - Initial hypotheses: {args.aide_n_initial_hypotheses}")
-        print(f"       - Hypotheses per iteration: {args.aide_n_hypotheses}")
-        print(f"       - Debug probability: {args.aide_debug_prob}")
-    print()
-    
     for record_number, knowledge_level in iterator:
         cmd = generate_cmd(
                 record_number=record_number,
@@ -186,10 +148,8 @@ def main():
                 n_iterations=args.n_iterations,
                 ideator=args.ideator,
                 science_runner=args.science_runner,
-                bon_n_hypotheses=args.bon_n_hypotheses,
-                bon_n_initial_hypotheses=args.bon_n_initial_hypotheses,
-                aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
-                aide_n_hypotheses=args.aide_n_hypotheses,
+                n_hypotheses=args.n_hypotheses,
+                n_initial_hypotheses=args.n_initial_hypotheses,
                 aide_debug_prob=args.aide_debug_prob,
                 aide_max_bug_depth=args.aide_max_bug_depth,
                 knowledge_level=knowledge_level,
@@ -213,10 +173,8 @@ def main():
                     n_iterations=args.n_iterations,
                     ideator=args.ideator,
                     science_runner=args.science_runner,
-                    bon_n_hypotheses=args.bon_n_hypotheses,
-                    bon_n_initial_hypotheses=args.bon_n_initial_hypotheses,
-                    aide_n_initial_hypotheses=args.aide_n_initial_hypotheses,
-                    aide_n_hypotheses=args.aide_n_hypotheses,
+                    n_hypotheses=args.n_hypotheses,
+                    n_initial_hypotheses=args.n_initial_hypotheses,
                     aide_debug_prob=args.aide_debug_prob,
                     aide_max_bug_depth=args.aide_max_bug_depth,
                     knowledge_level=knowledge_level,
