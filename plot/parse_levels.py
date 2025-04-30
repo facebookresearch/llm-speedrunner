@@ -1,10 +1,15 @@
 import os
 import yaml
 import re
+import numpy as np
 
 def extract_level_number(path):
     # Look for pattern like "level_X" in the path
     match = re.search(r'level_(\d+)', path)
+    if match:
+        return int(match.group(1))
+    # also look for pattern like "level_[12]"
+    match = re.search(r'level_\[(\d+)\]', path)
     if match:
         return int(match.group(1))
     return None
@@ -84,8 +89,6 @@ def find_levels_in_configs_glob(glob_strs):
                         
                     all_levels = []
                     ideator = ''
-                    # if 'debug_prob' in config['science_runner_args']:
-                    #     ipdb.set_trace()
                     if 'knowledge_pass_to_coder' in config['science_runner_args']:
                         if config['science_runner_args']['knowledge_pass_to_coder']:
                             knowledge_coder = True
@@ -100,6 +103,11 @@ def find_levels_in_configs_glob(glob_strs):
                         runner = 'aide'
                     else:
                         runner = 'bon'
+
+                    n_initial_hypotheses = config['science_runner_args']['n_initial_hypotheses']
+                    n_hypotheses = config['science_runner_args']['n_hypotheses']
+                    n_initial_hypotheses = config['science_runner_args']['n_initial_hypotheses']
+                    n_hypotheses = config['science_runner_args']['n_hypotheses']
 
                     # Check if knowledge_src_paths exists
                     if 'knowledge_src_paths' in config:
@@ -126,11 +134,148 @@ def find_levels_in_configs_glob(glob_strs):
                             'knowledge_coder': knowledge_coder,
                             'runner': runner,
                             'model': config['model_name'],
+                            'n_initial_hypotheses': n_initial_hypotheses,
+                            'n_hypotheses': n_hypotheses,
+                            'debug_prob': None if runner != 'aide' else config['science_runner_args']['debug_prob'],
                         }
                 except Exception as e:
                     print(f"Error processing {config_path}: {e}")
     
     return folder_info
+
+def filter_folder_info(folder_info, conditions):
+    # folder_info is a dictionary of the form {folder_name: {info}}
+    # conditions is a list of tuples, each tuple contains a condition
+    # the format of each condition is:
+    # (key, value)
+    # when all conditions are met, the folder is added to the filtered_folder_info
+    filtered_folder_info = {}
+    for folder_name, info in folder_info.items():
+        all_conditions_met = True
+        for condition in conditions:
+            if condition[0] == 'levels':
+                cond_info = info['levels'][0]
+            else:
+                cond_info = info[condition[0]]
+
+            if cond_info != condition[1]:
+                all_conditions_met = False
+                break
+        if all_conditions_met:
+            filtered_folder_info[folder_name] = info
+    return filtered_folder_info
+
+workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/workspace', item)
+from plot_progress import gather_metrics
+
+def process_metrics(record, workspace_base_path=workspace_base_path, gather_metrics=gather_metrics):
+    for k, v in record.items():
+        metrics = gather_metrics(
+            workspace_base_path(k),
+            metrics=['val_loss', 'train_time'],
+            workspace_template_path=os.path.join(
+                'workspace_templates', 
+                'nanogpt_speedrun', 
+                f"record_{v['record']}"
+            )
+        )
+        metrics.loc[metrics['val_loss'] >= 3.29, 'train_time'] = np.nan
+        record[k]['metrics'] = metrics
+    return record
+
+human_train_time_dict = {
+    1: 2968348,
+    2: 2209926,
+    3: 1386147,
+    4: 1301740,
+    5: 949528,
+    6: 766259,
+    7: 773072,
+    8: 662205,
+    9: 505531,
+    10: 477150,
+    11: 442985,
+    12: 317839,
+    13: 289805,
+    14: 273107,
+    15: 241463,
+    16: 232971,
+    17: 220374,
+    18: 211840,
+    19: 199442
+}
+
+def convert_to_dict(record, keep_dim=False):
+    results = {}
+    for k, v in record.items():
+        # record_num = int(k.split('-')[-1])
+        ## the +1 here is because the process is 0-indexed but record number is 1-indexed
+        # results[record_num + 1] = v['metrics']['train_time'].min()
+        # record_num = k.split('_2025')[0].split('_')[-1]
+        pattern = r"^record_(\d+)_"
+        match = re.match(pattern, k)
+        record_num = int(match.group(1))
+        if keep_dim:
+            results[record_num] = v['metrics']['train_time'].tolist()
+        else:
+            results[record_num] = v['metrics']['train_time'].min()
+    return results
+
+
+def compute_gap_in_percentage(
+        model_time, 
+        human_time=human_train_time_dict, 
+    ):
+    gaps = {}
+    for k, v in human_time.items():
+        if (k + 1) not in human_time:
+            continue
+        gaps[k] = v - human_time[k+1]
+    
+    recovered_times = {}
+    for k, v in model_time.items():
+        recovered_time = human_time[k] - v
+        recovered_times[k] = recovered_time
+
+    recovered_gap_in_percentage = {}
+    for k, v in recovered_times.items():
+        if (k + 1) not in gaps:
+            continue
+        recovered_gap_in_percentage[k] = v / gaps[k] if gaps[k] > 0 else 0
+
+    return recovered_gap_in_percentage
+
+def compute_gap_in_percentage_list(
+        model_time, 
+        human_time=human_train_time_dict, 
+    ):
+    gaps = {}
+    for k, v in human_time.items():
+        if (k + 1) not in human_time:
+            continue
+        gaps[k] = v - human_time[k+1]
+    
+    recovered_times = {}
+    for k, vs in model_time.items():
+        recovered_times[k] = []
+        for v in vs:
+            recovered_time = human_time[k] - v
+            recovered_times[k].append(recovered_time)
+
+    recovered_gap_in_percentage = {}
+    for k, vs in recovered_times.items():
+        if (k + 1) not in gaps:
+            continue
+        recovered_gap_in_percentage[k] = []
+        for v in vs:
+            recovered_gap_in_percentage[k].append(v / gaps[k] if gaps[k] > 0 else 0)
+        recovered_gap_in_percentage[k] = np.array(recovered_gap_in_percentage[k])
+        # replace nan with 0
+        recovered_gap_in_percentage[k][np.isnan(recovered_gap_in_percentage[k])] = 0
+
+    return recovered_gap_in_percentage
+
+
 
 if __name__ == "__main__":
     # import ipdb; ipdb.set_trace()
