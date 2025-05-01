@@ -12,12 +12,14 @@ Plot distances:
 python plot/analyze_embeddings.py \
 --df_path=/checkpoint/maui/minqijiang/nanoasi/nanogpt_embed_df.csv \
 --plot_metric='l2_end_mean' \
+--models 'o3-mini' \
 --levels '12' '125'\
 --ylabel 'L2 distance'
 
 python plot/analyze_embeddings.py \
 --df_path=/checkpoint/maui/minqijiang/nanoasi/nanogpt_embed_df.csv \
 --plot_metric='cos_end_mean' \
+--models 'o3-mini' \
 --levels '12' '125'\
 --ylabel 'Cosine distance'
 """
@@ -30,13 +32,13 @@ from typing import Dict, List, Any
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from transformers import AutoModel
+# from transformers import AutoModel
 import tqdm
 import matplotlib.pyplot as plt
 
 
 THRESHOLD_VAL_LOSS = 3.28
-
+AutoModel = Any
 
 def load_json(path: str) -> Dict:
     with open(path, "r") as fp:
@@ -200,6 +202,13 @@ def main():
         help="Which hint-levels to include in the plot (e.g. 12 125)."
     )
     parser.add_argument(
+        "--models",
+        nargs="+",
+        type=str,
+        default=None,
+        help="Which models to include."
+    )
+    parser.add_argument(
         "--ylabel",
         type=str,
         default='Distance',
@@ -207,12 +216,12 @@ def main():
     )
     args = parser.parse_args()
 
-    # resolve paths
+    # Resolve paths
     json_path = _resolve(args.json_path)
     save_path = _resolve(args.save_path)
     df_path   = _resolve(args.df_path)
 
-    # load or build the DataFrame
+    # Load or build the df
     if df_path and os.path.exists(df_path):
         print(f"Loading existing dataframe from {df_path}")
         df = pd.read_csv(df_path)
@@ -232,7 +241,6 @@ def main():
             print(f"Saving raw distances to {save_path}")
             df.to_csv(save_path, index=False)
 
-    # print the aggregated means
     print("\nAggregated means:")
     df = aggregate_and_print(df)
 
@@ -243,28 +251,38 @@ def main():
         except ValueError:
             raise ValueError(f"Could not parse levels {levels} as integers")
 
-        # now filter
+        models = args.models
         plot_df = df[df["levels"].isin(levels)]
+        if models is not None: 
+            plot_df = plot_df[plot_df["model"].isin(models)]
 
-        # choose markers & colors
-        markers = ["o", "s", "D", "x", "^", "v"]
-        level_markers = {lvl: markers[i % len(markers)] for i, lvl in enumerate(levels)}
+        if plot_df.empty:
+            raise ValueError("Nothing to plot after filtering by levels/models")
+
+        # Markers keyed by (model, levels)
+        marker_cycle = ["o", "s", "D", "x", "^", "v", "<", ">", "P", "X"]
+        uniq_pairs = plot_df[["model", "levels"]].drop_duplicates()
+        pair_markers = {
+            (row.model, row.levels): marker_cycle[i % len(marker_cycle)]
+            for i, row in uniq_pairs.reset_index(drop=True).iterrows()
+        }
+
         cmap = plt.rcParams["axes.prop_cycle"].by_key()["color"]
         methods = plot_df["method"].unique()
         method_colors = {m: cmap[i % len(cmap)] for i, m in enumerate(methods)}
 
         plt.figure()
-        for (m, lvl), sub in plot_df.groupby(["method", "levels"]):
+        for (meth, mdl, lvl), sub in plot_df.groupby(["method", "model", "levels"]):
             sub = sub.sort_values("record")
             if sub.empty:
                 continue
             plt.plot(
                 sub["record"],
                 sub[args.plot_metric],
-                marker=level_markers[lvl],
-                color=method_colors[m],
+                marker=pair_markers[(mdl, lvl)], 
+                color=method_colors[meth],
                 linestyle="-",
-                label=f"{m}, {lvl}"
+                label=f"{meth}, {mdl}, {lvl}"
             )
 
         max_record = int(plot_df["record"].max())
