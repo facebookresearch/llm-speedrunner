@@ -54,7 +54,6 @@ def generate_cmd(
         f"science_runner={science_runner}",
         f"coder_args.edit_format={aider_edit_format}",
         f"slurm_config_args.qos={qos}",
-        # f"coder_args.strict_diff_format={strict_diff_format}",
         f"science_runner_args.max_n_nodes={max_n_nodes}",
     ]
 
@@ -117,8 +116,43 @@ def main():
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
     parser.add_argument("--strict_diff_format", type=str2bool, default=False, help="Whether or not to use strict diff format")
+    parser.add_argument("--no_confirmation", type=str2bool, default=False, help="Whether or not to skip confirmation")
+    parser.add_argument("--template", type=str, default=None, help="Template to use")
     args = parser.parse_args()
-    
+
+    # use template values from flat, tree, forest, aide, and multi-aide
+    if args.template is not None:
+        if args.template == "flat":
+            args.science_runner = "bon"
+            args.n_initial_hypotheses = 20
+            args.n_iterations = 1
+        elif args.template == "tree":
+            args.science_runner = "bon"
+            args.n_initial_hypotheses = 1
+            args.n_hypotheses = 3
+            args.n_iterations = 20
+        elif args.template == "forest":
+            args.science_runner = "bon"
+            args.n_initial_hypotheses = 3
+            args.n_hypotheses = 3
+            args.n_iterations = 20
+        elif args.template == "aide":
+            args.science_runner = "aide"
+            args.n_initial_hypotheses = 3
+            args.n_hypotheses = 1
+            args.n_iterations = 20
+            args.aide_debug_prob = 0.5
+            args.aide_max_bug_depth = 5
+        elif args.template == "multi-aide":
+            args.science_runner = "aide"
+            args.n_initial_hypotheses = 3
+            args.n_hypotheses = 3
+            args.n_iterations = 20
+            args.aide_debug_prob = 0.5
+            args.aide_max_bug_depth = 5
+        else:
+            raise ValueError(f"Template {args.template} not found")
+
     username = os.getlogin()
     root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
@@ -126,7 +160,7 @@ def main():
             name=args.job_name,
             nodes=1,
             tasks_per_node=1,
-            cpus_per_task=32,
+            cpus_per_task=8,
             timeout_min=6*24*60,  # 6 days
             slurm_account="maui",
             slurm_qos="maui_high",
@@ -161,7 +195,9 @@ def main():
                 max_n_nodes=args.max_n_nodes,
             )
         print(" ".join(cmd))
-    input("Press Enter to continue")
+
+    if not args.no_confirmation:
+        input("Press Enter to continue")
     
     with executor.batch():
         for record_number, knowledge_level in iterator:
