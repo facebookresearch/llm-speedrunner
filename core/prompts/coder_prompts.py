@@ -40,8 +40,8 @@ ZERO_KNOWLEDGE_CODE_PROMPT = """Your goal is to improve the code to achieve the 
 # Task description
 {instruction}
 
-First, analyze the task and generate an idea and a plan:
-1. Think about what improvements or changes are needed
+First, analyze the task and come up with a plan for solving the task:
+1. Consider ideas for changes and improvements needed to improve on the task. Consider both creative and practical ideas.
 2. Break down the implementation into clear steps, generate pseudo codes for each step
 3. Consider potential challenges and how to address them
 
@@ -50,7 +50,7 @@ Then, implement your plan by making the necessary code changes.
 I trust you to make good decisions, so do not ask me for permission to make any code changes.
 Do not ever ask to install any additional packages. The answer will be no.
 
-In your final response, include ONLY the fully-functional updated code which implements your plan. Do NOT include any other content in your final response besides the code.
+Respond with your plan for improving the code, followed by the fully-functional updated code implementing your plan.
 """
 
 STRICT_DIFF_PROMPT = """
