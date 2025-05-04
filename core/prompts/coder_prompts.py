@@ -35,6 +35,24 @@ Do not ever ask to install any additional packages. The answer will be no.
 In your final response, include ONLY the fully-functional updated code which implements ideas in the hypothesis above. Do NOT include any other content in your final response besides the code.
 """
 
+ZERO_KNOWLEDGE_CODE_PROMPT = """Your goal is to improve the code to achieve the following task:
+
+# Task description
+{instruction}
+
+First, analyze the task and come up with a plan for solving the task:
+1. Consider ideas for changes and improvements needed to improve on the task. Consider both creative and practical ideas.
+2. Break down the implementation into clear steps, generate pseudo codes for each step
+3. Consider potential challenges and how to address them
+
+Then, implement your plan by making the necessary code changes.
+
+I trust you to make good decisions, so do not ask me for permission to make any code changes.
+Do not ever ask to install any additional packages. The answer will be no.
+
+Respond with your plan for improving the code, followed by the fully-functional updated code implementing your plan.
+"""
+
 STRICT_DIFF_PROMPT = """
 You will edit the code using the diff format, when generating the diff, make sure the generated SEARCH block will **EXACTLY** match the code you will edit.
 Do not skip any lines especially in the SEARCH block as missing anything will results in the code not being edited.
@@ -77,6 +95,13 @@ def basic_code_prompt(
 	if bug_history:
 		instructions.append(
 			CHILD_BUG_INFO_COMPONENT.format(history=bug_history)
+		)
+
+	if not len(ideas) and not knowledge:
+		# this case we use a dummy ideator and zero knowledge
+		# ideas should be '', and knowledge should be None
+		return preamble + '\n' + ZERO_KNOWLEDGE_CODE_PROMPT.format(
+			instruction='\n'.join(instructions).rstrip()
 		)
 
 	return preamble + '\n' + BASIC_CODE_PROMPT.format(
