@@ -332,7 +332,7 @@ def run_cascaded_experiment(
                 ))
             print(f"Dry run, {len(cmds)} commands:")
             for cmd in cmds:
-                print("\n".join(cmd))
+                print(" ".join(cmd))
             print("-" * 100)
             current_workspace_template_path = f'best_template_record_{current_record}'
             print(f"Dry run, skipping job submission, current_workspace_template_path: {current_workspace_template_path}")
@@ -358,8 +358,9 @@ def main():
     parser.add_argument("--max_records", type=int, default=21, help="Maximum number of records to process")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
     parser.add_argument("--dry_run", type=str2bool, default=False, help="Whether or not to skip confirmation")
+    parser.add_argument("--break_at_failure", type=str2bool, default=True, help="Whether or not to break at failure")
+    parser.add_argument("--failure_threshold", type=float, default=0.5, help="Failure threshold")
     args = parser.parse_args()
-
 
     results = run_cascaded_experiment(
         model_names=args.model_names,
@@ -367,6 +368,8 @@ def main():
         max_records=args.max_records,
         array_parallelism=args.array_parallelism,
         dry_run=args.dry_run,
+        break_at_failure=args.break_at_failure,
+        failure_threshold=args.failure_threshold,
     )
     if not args.dry_run:
         # Save results to file
