@@ -202,7 +202,9 @@ human_train_time_dict = {
     16: 232971,
     17: 220374,
     18: 211840,
-    19: 199442
+    19: 199442,
+    20: 188680,
+    21: 184262
 }
 
 def convert_to_dict(record, keep_dim=False):
