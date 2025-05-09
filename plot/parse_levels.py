@@ -2,6 +2,7 @@ import os
 import yaml
 import re
 import numpy as np
+from collections import defaultdict
 
 def extract_level_number(path):
     # Look for pattern like "level_X" in the path
@@ -12,6 +13,10 @@ def extract_level_number(path):
     match = re.search(r'level_\[(\d+)\]', path)
     if match:
         return int(match.group(1))
+    # also look for pattern like "level_[z]"
+    match = re.search(r'level_\[z\]', path)
+    if match:
+        return 'z'
     return None
 
 def extract_record_number(directory_name):
@@ -60,6 +65,7 @@ def find_levels_in_configs(base_dir):
     
     return folder_info
 
+from tqdm import tqdm
 
 def find_levels_in_configs_glob(glob_strs):
     import glob
@@ -72,7 +78,7 @@ def find_levels_in_configs_glob(glob_strs):
     print(f"Found {len(roots)} directories")
     
     # Walk through all directories
-    for root in roots:
+    for root in tqdm(roots):
         for _, dirs, files in os.walk(root):
             if 'config.yaml' in files:
                 # Get the immediate parent directory name
@@ -104,10 +110,9 @@ def find_levels_in_configs_glob(glob_strs):
                     else:
                         runner = 'bon'
 
-                    n_initial_hypotheses = config['science_runner_args']['n_initial_hypotheses']
-                    n_hypotheses = config['science_runner_args']['n_hypotheses']
-                    n_initial_hypotheses = config['science_runner_args']['n_initial_hypotheses']
-                    n_hypotheses = config['science_runner_args']['n_hypotheses']
+                    n_initial_hypotheses = config['science_runner_args'].get('n_initial_hypotheses', None)
+                    n_hypotheses = config['science_runner_args'].get('n_hypotheses', None)
+                    n_iterations = config['n_iterations']
 
                     # Check if knowledge_src_paths exists
                     if 'knowledge_src_paths' in config:
@@ -137,6 +142,7 @@ def find_levels_in_configs_glob(glob_strs):
                             'n_initial_hypotheses': n_initial_hypotheses,
                             'n_hypotheses': n_hypotheses,
                             'debug_prob': None if runner != 'aide' else config['science_runner_args']['debug_prob'],
+                            'n_iterations': n_iterations,
                         }
                 except Exception as e:
                     print(f"Error processing {config_path}: {e}")
@@ -166,19 +172,34 @@ def filter_folder_info(folder_info, conditions):
     return filtered_folder_info
 
 workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/workspace', item)
+old_workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/old_workspace/nanogpt_speedrun/', item)
 from plot_progress import gather_metrics
 
-def process_metrics(record, workspace_base_path=workspace_base_path, gather_metrics=gather_metrics):
+def process_metrics(record, workspace_base_path=workspace_base_path, gather_metrics=gather_metrics, keep_k=None):
     for k, v in record.items():
-        metrics = gather_metrics(
-            workspace_base_path(k),
-            metrics=['val_loss', 'train_time'],
-            workspace_template_path=os.path.join(
-                'workspace_templates', 
-                'nanogpt_speedrun', 
-                f"record_{v['record']}"
+        try:
+            metrics = gather_metrics(
+                workspace_base_path(k),
+                metrics=['val_loss', 'train_time'],
+                workspace_template_path=os.path.join(
+                    'workspace_templates', 
+                    'nanogpt_speedrun', 
+                    f"record_{v['record']}"
+                )
             )
-        )
+        except Exception as e:
+            metrics = gather_metrics(
+                old_workspace_base_path(k),
+                metrics=['val_loss', 'train_time'],
+                workspace_template_path=os.path.join(
+                    'workspace_templates', 
+                    'nanogpt_speedrun', 
+                    f"record_{v['record']}"
+                )
+            )
+        if keep_k is not None:
+            # only keep the first keep_k metrics
+            metrics = metrics[metrics['step'] <= keep_k]
         metrics.loc[metrics['val_loss'] >= 3.29, 'train_time'] = np.nan
         record[k]['metrics'] = metrics
     return record
@@ -202,7 +223,9 @@ human_train_time_dict = {
     16: 232971,
     17: 220374,
     18: 211840,
-    19: 199442
+    19: 199442,
+    20: 188680,
+    21: 184262,
 }
 
 def convert_to_dict(record, keep_dim=False):
@@ -221,6 +244,21 @@ def convert_to_dict(record, keep_dim=False):
             results[record_num] = v['metrics']['train_time'].min()
     return results
 
+def convert_to_dict_multiple_runs(record, keep_dim=False):
+    results = defaultdict(list)
+    for k, v in record.items():
+        # record_num = int(k.split('-')[-1])
+        ## the +1 here is because the process is 0-indexed but record number is 1-indexed
+        # results[record_num + 1] = v['metrics']['train_time'].min()
+        # record_num = k.split('_2025')[0].split('_')[-1]
+        pattern = r"^record_(\d+)_"
+        match = re.match(pattern, k)
+        record_num = int(match.group(1))
+        if keep_dim:
+            results[record_num].append(v['metrics']['train_time'].tolist())
+        else:
+            results[record_num].append(v['metrics']['train_time'].min())
+    return results
 
 def compute_gap_in_percentage(
         model_time, 
