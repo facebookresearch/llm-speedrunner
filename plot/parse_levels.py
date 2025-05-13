@@ -173,6 +173,12 @@ def filter_folder_info(folder_info, conditions):
 
 workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/workspace', item)
 old_workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/old_workspace/nanogpt_speedrun/', item)
+list_of_base_paths = [
+    '/checkpoint/maui/zhaobc/scientist/workspace', 
+    '/checkpoint/maui/zhaobc/scientist/old_workspace/nanogpt_speedrun/',
+    '/checkpoint/maui/zhaobc/scientist/workspace/0507_relaunch/',
+    '/checkpoint/maui/zhaobc/scientist/workspace/r1_relaunch/',
+]
 from plot_progress import gather_metrics
 
 def process_metrics(record, workspace_base_path=workspace_base_path, gather_metrics=gather_metrics, keep_k=None):
@@ -188,8 +194,15 @@ def process_metrics(record, workspace_base_path=workspace_base_path, gather_metr
                 )
             )
         except Exception as e:
+            exist_path = None
+            for base_path in list_of_base_paths:
+                if os.path.exists(os.path.join(base_path, k)):
+                    exist_path = base_path
+                    break
+            if exist_path is None:
+                raise ValueError(f"Path {k} does not exist in any of the base paths")
             metrics = gather_metrics(
-                old_workspace_base_path(k),
+                exist_path,
                 metrics=['val_loss', 'train_time'],
                 workspace_template_path=os.path.join(
                     'workspace_templates', 
@@ -203,6 +216,23 @@ def process_metrics(record, workspace_base_path=workspace_base_path, gather_metr
         metrics.loc[metrics['val_loss'] >= 3.29, 'train_time'] = np.nan
         record[k]['metrics'] = metrics
     return record
+
+def process_metrics_raw_path(raw_path, record_num, gather_metrics=gather_metrics, keep_k=None):
+    metrics = gather_metrics(
+        raw_path,
+        metrics=['val_loss', 'train_time'],
+        workspace_template_path=os.path.join(
+            'workspace_templates', 
+                'nanogpt_speedrun', 
+                f"record_{record_num}"
+        )
+    )
+    if keep_k is not None:
+        # only keep the first keep_k metrics
+        metrics = metrics[metrics['step'] <= keep_k]
+    metrics.loc[metrics['val_loss'] >= 3.29, 'train_time'] = np.nan
+    return metrics
+
 
 human_train_time_dict = {
     1: 2968348,
@@ -228,7 +258,7 @@ human_train_time_dict = {
     21: 184262,
 }
 
-def convert_to_dict(record, keep_dim=False):
+def convert_to_dict(record, keep_dim=False, keep_name=False):
     results = {}
     for k, v in record.items():
         # record_num = int(k.split('-')[-1])
@@ -239,12 +269,15 @@ def convert_to_dict(record, keep_dim=False):
         match = re.match(pattern, k)
         record_num = int(match.group(1))
         if keep_dim:
-            results[record_num] = v['metrics']['train_time'].tolist()
+            to_save = v['metrics']['train_time'].tolist()
         else:
-            results[record_num] = v['metrics']['train_time'].min()
+            to_save = v['metrics']['train_time'].min()
+        if keep_name:
+            to_save = (k, to_save)
+        results[record_num] = to_save
     return results
 
-def convert_to_dict_multiple_runs(record, keep_dim=False):
+def convert_to_dict_multiple_runs(record, keep_dim=False, keep_name=False):
     results = defaultdict(list)
     for k, v in record.items():
         # record_num = int(k.split('-')[-1])
@@ -255,14 +288,18 @@ def convert_to_dict_multiple_runs(record, keep_dim=False):
         match = re.match(pattern, k)
         record_num = int(match.group(1))
         if keep_dim:
-            results[record_num].append(v['metrics']['train_time'].tolist())
+            to_save = v['metrics']['train_time'].tolist()
         else:
-            results[record_num].append(v['metrics']['train_time'].min())
+            to_save = v['metrics']['train_time'].min()
+        if keep_name:
+            to_save = (k, to_save)
+        results[record_num].append(to_save)
     return results
 
 def compute_gap_in_percentage(
         model_time, 
         human_time=human_train_time_dict, 
+        keep_name=False,
     ):
     gaps = {}
     for k, v in human_time.items():
@@ -272,20 +309,30 @@ def compute_gap_in_percentage(
     
     recovered_times = {}
     for k, v in model_time.items():
-        recovered_time = human_time[k] - v
-        recovered_times[k] = recovered_time
+        if keep_name:
+            recovered_time = human_time[k] - v[1]
+        else:
+            recovered_time = human_time[k] - v
+        if keep_name:
+            recovered_times[k] = (v[0], recovered_time)
+        else:
+            recovered_times[k] = recovered_time
 
     recovered_gap_in_percentage = {}
     for k, v in recovered_times.items():
         if (k + 1) not in gaps:
             continue
-        recovered_gap_in_percentage[k] = v / gaps[k] if gaps[k] > 0 else 0
+        if keep_name:
+            recovered_gap_in_percentage[k] = v[1] / gaps[k] if gaps[k] > 0 else 0
+        else:
+            recovered_gap_in_percentage[k] = v / gaps[k] if gaps[k] > 0 else 0
 
     return recovered_gap_in_percentage
 
-def compute_gap_in_percentage_list(
+def compute_gap_in_percentage_list_keep_name(
         model_time, 
         human_time=human_train_time_dict, 
+        keep_name=False,
     ):
     gaps = {}
     for k, v in human_time.items():
@@ -297,8 +344,14 @@ def compute_gap_in_percentage_list(
     for k, vs in model_time.items():
         recovered_times[k] = []
         for v in vs:
-            recovered_time = human_time[k] - v
-            recovered_times[k].append(recovered_time)
+            if keep_name:
+                recovered_time = human_time[k] - v[1]
+            else:
+                recovered_time = human_time[k] - v
+            if keep_name:
+                recovered_times[k].append((v[0], recovered_time))
+            else:
+                recovered_times[k].append(recovered_time)
 
     recovered_gap_in_percentage = {}
     for k, vs in recovered_times.items():
@@ -306,7 +359,57 @@ def compute_gap_in_percentage_list(
             continue
         recovered_gap_in_percentage[k] = []
         for v in vs:
-            recovered_gap_in_percentage[k].append(v / gaps[k] if gaps[k] > 0 else 0)
+            if keep_name:
+                recovered_gap_in_percentage[k].append((v[0], v[1] / gaps[k] if gaps[k] > 0 else 0))
+            else:
+                recovered_gap_in_percentage[k].append(v / gaps[k] if gaps[k] > 0 else 0)
+        if keep_name:
+            value = np.array([v[1] for v in recovered_gap_in_percentage[k]])
+            value[np.isnan(value)] = 0
+            name = np.array([v[0] for v in recovered_gap_in_percentage[k]])
+            recovered_gap_in_percentage[k] = (name, value)
+        else:
+            recovered_gap_in_percentage[k] = np.array(recovered_gap_in_percentage[k])
+            # replace nan with 0
+            recovered_gap_in_percentage[k][np.isnan(recovered_gap_in_percentage[k])] = 0
+
+    return recovered_gap_in_percentage
+
+def compute_gap_in_percentage_list(
+        model_time, 
+        human_time=human_train_time_dict, 
+        keep_name=False,
+    ):
+    gaps = {}
+    for k, v in human_time.items():
+        if (k + 1) not in human_time:
+            continue
+        gaps[k] = v - human_time[k+1]
+    
+    recovered_times = {}
+    for k, vs in model_time.items():
+        recovered_times[k] = []
+        for v in vs:
+            if keep_name:
+                recovered_time = human_time[k] - v[1]
+            else:
+                recovered_time = human_time[k] - v
+            if keep_name:
+                recovered_times[k].append((v[0], recovered_time))
+            else:
+                recovered_times[k].append(recovered_time)
+
+    recovered_gap_in_percentage = {}
+    for k, vs in recovered_times.items():
+        if (k + 1) not in gaps:
+            continue
+        recovered_gap_in_percentage[k] = []
+        for v in vs:
+            if keep_name:
+                recovered_gap_in_percentage[k].append(v[1] / gaps[k] if gaps[k] > 0 else 0)
+            else:
+                recovered_gap_in_percentage[k].append(v / gaps[k] if gaps[k] > 0 else 0)
+
         recovered_gap_in_percentage[k] = np.array(recovered_gap_in_percentage[k])
         # replace nan with 0
         recovered_gap_in_percentage[k][np.isnan(recovered_gap_in_percentage[k])] = 0
