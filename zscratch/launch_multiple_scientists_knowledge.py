@@ -101,7 +101,8 @@ def main():
     parser.add_argument("--job_name", type=str, default="knowledge_sweep", help="Job name")
     parser.add_argument("--qos", type=str, default="maui_high", help="Quality of service")
     parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
-    parser.add_argument("--record_numbers", type=int, nargs='+', required=True, help="List of record numbers to sweep over")
+    parser.add_argument("--record_numbers", type=int, nargs='+', default=[-1], help="List of record numbers to sweep over")
+    parser.add_argument("--env_number", type=int, default=1, help="Environment number")
     parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
@@ -143,7 +144,7 @@ def main():
             args.n_iterations = 20
             args.aide_debug_prob = 0.5
             args.aide_max_bug_depth = 5
-        elif args.template == "multi-aide":
+        elif args.template == "multi_aide":
             args.science_runner = "aide"
             args.n_initial_hypotheses = 3
             args.n_hypotheses = 3
@@ -152,9 +153,21 @@ def main():
             args.aide_max_bug_depth = 5
         else:
             raise ValueError(f"Template {args.template} not found")
+    
+    if args.record_numbers == [-1]:
+        if args.env_number == 1:
+            args.record_numbers = [1, 2, 3, 4, 5, 7, 8, 9, 10]
+        elif args.env_number == 2:
+            args.record_numbers = [11, 12, 13, 14, 15, 16, 17, 18]
+        elif args.env_number == 3:
+            args.record_numbers = [19, 20]
+        elif args.env_number == 4:
+            args.record_numbers = [1, 2, 3]
+        else:
+            raise ValueError(f"Environment number {args.env_number} not found")
 
     username = os.getlogin()
-    root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/"
+    root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/0511_relaunch/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
     executor.update_parameters(
             name=args.job_name,
