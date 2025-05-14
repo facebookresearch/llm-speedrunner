@@ -177,6 +177,7 @@ list_of_base_paths = [
     '/checkpoint/maui/zhaobc/scientist/workspace', 
     '/checkpoint/maui/zhaobc/scientist/old_workspace/nanogpt_speedrun/',
     '/checkpoint/maui/zhaobc/scientist/workspace/0507_relaunch/',
+    '/checkpoint/maui/zhaobc/scientist/workspace/0511_relaunch/',
     '/checkpoint/maui/zhaobc/scientist/workspace/r1_relaunch/',
 ]
 from plot_progress import gather_metrics
