@@ -4,27 +4,11 @@
 # and run the following commands.
 # First, run for records 1-11 (we omit record 6 due to PyTorch upgrade):
 conda activate environment-1-11
-python launchers/launch_llm_speedrun_agent_baselines.py \
+python launchers/launch_llm_speedrun_agent_additional_knowledge.py \
 --job_name baselines_records_1_11 \
---record_numbers 1 2 3 4 5 7 8 9 10 11 \
---knowledge_levels z 1 2 5 [12] [125] \
+--record_numbers 11 \
 --ideator dummy 
 
-# Then, run for records 12-18:
-conda activate environment-12-18
-python launchers/launch_llm_speedrun_agent_baselines.py \
---job_name baselines_records_12_18 \
---record_numbers 12 13 14 15 16 17 18 \
---knowledge_levels z 1 2 5 [12] [125] \
---ideator dummy 
-
-# Finally, for records 19-21:
-conda activate records-19-21
-python launchers/launch_llm_speedrun_agent_baselines.py \
---job_name baselines_records_19_20 \
---record_numbers 19 20 \
---knowledge_levels z 1 2 5 [12] [125] \
---ideator dummy 
 """
 from typing import Optional
 import os
@@ -56,13 +40,12 @@ def generate_cmd(
     n_initial_hypotheses: int = 1,
     aide_debug_prob: float = 1.0,
     aide_max_bug_depth: int = 50,
-    knowledge_level: str = "0",
     pass_coder_knowledge: bool = False,
     aider_edit_format: str = "diff",
     strict_diff_format: bool = False,
 ):
     # wrap with ""
-    knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
+    knowledge_src_paths="data/nanogpt_speedrun_knowledge_in_levels/record_11/level_1_*.txt", "data/nanogpt_speedrun_knowledge_in_levels/flex_attn.md"
     cmd = [
         "python",
         f"launch_scientist.py",
@@ -85,7 +68,7 @@ def generate_cmd(
         cmd.append(f"science_runner_args.debug_prob={aide_debug_prob}")
         cmd.append(f"science_runner_args.max_bug_depth={aide_max_bug_depth}")
 
-    cmd.append(f'knowledge_src_paths=[{knowledge_path}]')
+    cmd.append(f'knowledge_src_paths=[{knowledge_src_paths}]')
     
     if pass_coder_knowledge:
         cmd.append(f'science_runner_args.knowledge_pass_to_coder=True')
@@ -160,7 +143,6 @@ def main():
     parser.add_argument("--n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses")
     parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
-    parser.add_argument("--knowledge_levels", nargs='+', default=['1', '2', '5', '[12]', '[125]'], type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
@@ -169,6 +151,7 @@ def main():
     parser.add_argument("--searches", type=str, nargs='+', default=['flat', 'tree', 'forest', 'aide', 'multi-aide'], help="Search variants to use")
     args = parser.parse_args()
 
+    # make sure to anonymize this
     account = "fake_account"
     username = os.getlogin()
     root_workspace_path = f"/checkpoint/{account}/{username}/scientist/workspace/"
@@ -184,16 +167,16 @@ def main():
             slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []
+    
     iterator = list(itertools.product(
         args.record_numbers,
-        args.knowledge_levels,
         args.searches,
         args.models,
     ))
     print(f"Generating {len(iterator)} commands")
     print(f"Root workspace path: {root_workspace_path}")
     
-    for record_number, knowledge_level, search, model_name in iterator:
+    for record_number, search, model_name in iterator:
         set_agent_search_parameters(search, args)
         cmd = generate_cmd(
                 record_number=record_number,
@@ -205,7 +188,6 @@ def main():
                 n_initial_hypotheses=args.n_initial_hypotheses,
                 aide_debug_prob=args.aide_debug_prob,
                 aide_max_bug_depth=args.aide_max_bug_depth,
-                knowledge_level=knowledge_level,
                 pass_coder_knowledge=args.pass_coder_knowledge,
                 aider_edit_format=args.aider_edit_format,
                 strict_diff_format=args.strict_diff_format,
@@ -217,7 +199,7 @@ def main():
         input("Press Enter to continue")
     
     with executor.batch():
-        for record_number, knowledge_level, search, model_name in iterator:
+        for record_number, search, model_name in iterator:
             now = datetime.datetime.now()
             workspace_path_prefix = f"{root_workspace_path}record_{record_number}_{now:%Y%m%d_%H%M%S}"
             set_agent_search_parameters(search, args)
@@ -233,7 +215,6 @@ def main():
                     n_initial_hypotheses=args.n_initial_hypotheses,
                     aide_debug_prob=args.aide_debug_prob,
                     aide_max_bug_depth=args.aide_max_bug_depth,
-                    knowledge_level=knowledge_level,
                     pass_coder_knowledge=args.pass_coder_knowledge,
                     aider_edit_format=args.aider_edit_format,
                     strict_diff_format=args.strict_diff_format,
