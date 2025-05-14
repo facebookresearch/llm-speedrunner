@@ -22,8 +22,8 @@ def main():
         gpus_per_node=2,
         cpus_per_task=4,
         mem_gb=70,
-        slurm_account="maui",
-        slurm_qos="maui_high"
+        slurm_account="ram",
+        slurm_qos="dev"
     )
 
     # Submit the job

@@ -21,7 +21,9 @@ def get_aider_model_name(model_name: str) -> str:
 
 def main():
 
-   model_url = "http://submit-0.fair-aws-h200-1.hpcaas:19743/v1/"
+   # model_url = "http://submit-0.fair-aws-h200-1.hpcaas:19743/v1/"
+   node_id = "cr1-h100-p548xlarge-245"
+   model_url = "http://${node_id}.fair-aws-h100-2.hpcaas:8000/v1"
 
    litellm.set_verbose = True
 
