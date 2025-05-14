@@ -22,7 +22,7 @@ python launchers/launch_llm_speedrun_agent_baselines.py \
 conda activate records-19-21
 python launchers/launch_llm_speedrun_agent_baselines.py \
 --job_name baselines_records_19_20 \
---record_numbers 19-20 \
+--record_numbers 19 20 \
 --knowledge_levels z 1 2 5 [12] [125] \
 --ideator dummy 
 """
@@ -57,7 +57,6 @@ def generate_cmd(
     aide_debug_prob: float = 1.0,
     aide_max_bug_depth: int = 50,
     knowledge_level: str = "0",
-    no_knowledge: bool = False,
     pass_coder_knowledge: bool = False,
     aider_edit_format: str = "diff",
     strict_diff_format: bool = False,
@@ -86,8 +85,7 @@ def generate_cmd(
         cmd.append(f"science_runner_args.debug_prob={aide_debug_prob}")
         cmd.append(f"science_runner_args.max_bug_depth={aide_max_bug_depth}")
 
-    if not no_knowledge:
-        cmd.append(f'knowledge_src_paths=[{knowledge_path}]')
+    cmd.append(f'knowledge_src_paths=[{knowledge_path}]')
     
     if pass_coder_knowledge:
         cmd.append(f'science_runner_args.knowledge_pass_to_coder=True')
@@ -163,9 +161,7 @@ def main():
     parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
     parser.add_argument("--knowledge_levels", nargs='+', default=['1', '2', '5', '[12]', '[125]'], type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
-    # parser.add_argument("--knowledge_level", type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
-    parser.add_argument("--no_knowledge", type=str2bool, default=False, help="Whether or not no knowledge")
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
     parser.add_argument("--strict_diff_format", type=str2bool, default=False, help="Whether or not to use strict diff format")
@@ -173,7 +169,6 @@ def main():
     parser.add_argument("--searches", type=str, nargs='+', default=['flat', 'tree', 'forest', 'aide', 'multi-aide'], help="Search variants to use")
     args = parser.parse_args()
 
-    # make sure to anonymize this
     account = "fake_account"
     username = os.getlogin()
     root_workspace_path = f"/checkpoint/{account}/{username}/scientist/workspace/"
@@ -189,20 +184,12 @@ def main():
             slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []
-    if args.no_knowledge:
-        iterator = list(itertools.product(
-            args.record_numbers,
-            [-1],
-            args.searches,
-            args.models,
-        ))
-    else:
-        iterator = list(itertools.product(
-            args.record_numbers,
-            args.knowledge_levels,
-            args.searches,
-            args.models,
-        ))
+    iterator = list(itertools.product(
+        args.record_numbers,
+        args.knowledge_levels,
+        args.searches,
+        args.models,
+    ))
     print(f"Generating {len(iterator)} commands")
     print(f"Root workspace path: {root_workspace_path}")
     
@@ -219,7 +206,6 @@ def main():
                 aide_debug_prob=args.aide_debug_prob,
                 aide_max_bug_depth=args.aide_max_bug_depth,
                 knowledge_level=knowledge_level,
-                no_knowledge=args.no_knowledge,
                 pass_coder_knowledge=args.pass_coder_knowledge,
                 aider_edit_format=args.aider_edit_format,
                 strict_diff_format=args.strict_diff_format,
@@ -248,7 +234,6 @@ def main():
                     aide_debug_prob=args.aide_debug_prob,
                     aide_max_bug_depth=args.aide_max_bug_depth,
                     knowledge_level=knowledge_level,
-                    no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
                     aider_edit_format=args.aider_edit_format,
                     strict_diff_format=args.strict_diff_format,
