@@ -55,9 +55,9 @@
       "@id": "llm_speedrun.zip",
       "name": "llm_speedrun.zip",
       "description": "Zip file containing the Automated LLM Speedrunning Benchmark dataset",
-      "contentUrl": "https://drive.usercontent.google.com/download?id=1kKXOWbFYPojn0ueEOyfpHn1d1QvhzjQU&confirm=xxx",
+      "contentUrl": "https://drive.usercontent.google.com/download?id=1edVdWtc3XJRRzcxFeWUazjc9vUzUHkVp&confirm=xxx",
       "encodingFormat": "application/zip",
-      "sha256": "460b918ea55f21ad300fc39aaa4f99bd0a6248d7514bf5c20b51379b1067a76b"
+      "sha256": "d9a8f4855be22664ee4e634453aa624278f179ff92c939da55c21512e45a4c69"
     },
     {
       "@type": "cr:FileObject",
