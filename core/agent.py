@@ -1,5 +1,5 @@
 from typing import Callable, Optional
-
+import os
 from .llm_client import LLMClient
 
 
@@ -10,20 +10,28 @@ class Agent:
         model_name: Optional[str] = None,
         system_prompt: Optional[str] = None,
         log_llm_metrics=False,
-        secrets: Optional[dict[str: str]] = None):
+        secrets: Optional[dict[str: str]] = None,
+        api_version: Optional[str] = None
+        ):
 
         api_key = None
         if secrets:
             for k, v in secrets.items():
-                if k.endswith('OPENAI_API_KEY'):
+                if k.endswith('OPENAI_API_KEY') and 'gemini' not in model_name:
                     api_key = v
                     break
+                if 'gemini' in model_name and k.endswith('GEMINI_API_KEY'):
+                    api_key = v
+                    os.environ['GEMINI_API_KEY'] = api_key
+                    break
+
 
         self.llm = LLMClient(
             model_url=model_url,
             model_name=model_name,
             log_metrics=log_llm_metrics,
-            api_key=api_key
+            api_key=api_key,
+            api_version=api_version
         )
         self.system_prompt = system_prompt
 

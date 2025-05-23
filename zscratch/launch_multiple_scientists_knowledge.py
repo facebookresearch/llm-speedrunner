@@ -103,6 +103,7 @@ def main():
     parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', default=[-1], help="List of record numbers to sweep over")
     parser.add_argument("--env_number", type=int, default=1, help="Environment number")
+    # modelname can be deepseek_r1, gemini_2_5, or o3_mini 
     parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
