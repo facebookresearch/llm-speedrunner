@@ -16,13 +16,14 @@ from core.workspace import Workspace
 NAME_TO_AIDER_MODEL_NAME = {
     'o1-preview': 'azure/o1-preview',
     'gpt-4o': 'azure/gpt-4o',
-    'o3-mini': 'azure/o3-mini'
+    'o3-mini': 'azure/o3-mini',
+    'gemini-2.5-pro': 'gemini/gemini-2.5-flash-preview-04-17'
 }
 
 
 def get_aider_model_name(model_name: str) -> str:
     name = NAME_TO_AIDER_MODEL_NAME.get(model_name, model_name)
-    if not name.startswith('openai/') and not name.startswith('azure/'):
+    if not name.startswith('openai/') and not name.startswith('azure/') and not name.startswith('gemini'):
         name = f'openai/{model_name}'
 
     return name
@@ -38,6 +39,8 @@ def set_env_vars_for_model(model_name: str, model_url: Optional[str] = None, sec
                     os.environ['OPENAI_API_KEY'] = v
                     break
         # Note: Also requires setting AZURE_API_KEY and AZURE_OPENAI_API_KEY beforehand
+    elif model_name in ['gemini-2.5-pro']:
+        os.environ['GEMINI_API_KEY'] = secrets['GEMINI_API_KEY']
     else:
         os.environ['OPENAI_API_BASE'] = model_url
         os.environ['OPENAI_API_KEY'] = "sk-123"  # dummy value
@@ -68,6 +71,7 @@ class AiderCoder(Agent):
 
         set_env_vars_for_model(model_name, model_url, secrets)
             
+        # import ipdb; ipdb.set_trace()
         aider_model_name = get_aider_model_name(model_name)
         main_model = Model(aider_model_name)
         if use_temperature is not None:

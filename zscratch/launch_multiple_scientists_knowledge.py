@@ -40,7 +40,6 @@ def generate_cmd(
     no_knowledge: bool = False,
     pass_coder_knowledge: bool = False,
     aider_edit_format: str = "diff",
-    strict_diff_format: bool = False,
 ):
     # wrap with ""
     knowledge_path = f'"data/nanogpt_speedrun_knowledge_in_levels/record_{record_number}/level_{knowledge_level}_*.txt"'
@@ -103,7 +102,8 @@ def main():
     parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', default=[-1], help="List of record numbers to sweep over")
     parser.add_argument("--env_number", type=int, default=1, help="Environment number")
-    parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
+    # modelname can be deepseek_r1, gemini_2_5, or o3_mini 
+    parser.add_argument("--model_name", type=str, default="deepseek_r1", choices=['deepseek_r1', 'gemini_2_5', 'o3_mini'], help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
     parser.add_argument("--science_runner", type=str, default="bon", help="Science runner to use")
@@ -116,7 +116,6 @@ def main():
     parser.add_argument("--no_knowledge", type=str2bool, default=False, help="Whether or not no knowledge")
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
-    parser.add_argument("--strict_diff_format", type=str2bool, default=False, help="Whether or not to use strict diff format")
     parser.add_argument("--no_confirmation", type=str2bool, default=False, help="Whether or not to skip confirmation")
     parser.add_argument("--template", type=str, default=None, help="Template to use")
     args = parser.parse_args()
@@ -204,7 +203,6 @@ def main():
                 no_knowledge=args.no_knowledge,
                 pass_coder_knowledge=args.pass_coder_knowledge,
                 aider_edit_format=args.aider_edit_format,
-                strict_diff_format=args.strict_diff_format,
                 max_n_nodes=args.max_n_nodes,
             )
         print(" ".join(cmd))
@@ -232,7 +230,6 @@ def main():
                     no_knowledge=args.no_knowledge,
                     pass_coder_knowledge=args.pass_coder_knowledge,
                     aider_edit_format=args.aider_edit_format,
-                    strict_diff_format=args.strict_diff_format,
                     max_n_nodes=args.max_n_nodes,
                 ),
                 workspace_path_prefix
