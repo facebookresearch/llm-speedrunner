@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: openai/claude-3.7-sonnet
+model_url: "http://localhost:8000/v1"
