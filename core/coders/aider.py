@@ -17,7 +17,8 @@ NAME_TO_AIDER_MODEL_NAME = {
     'o1-preview': 'azure/o1-preview',
     'gpt-4o': 'azure/gpt-4o',
     'o3-mini': 'azure/o3-mini',
-    'gemini-2.5-pro': 'gemini/gemini-2.5-flash-preview-04-17'
+    'gemini-2.5-pro': 'gemini/gemini-2.5-flash-preview-04-17',
+    'claude-3-5-sonnet': 'openai/claude-3-5-sonnet', # for calling the openai compatible API for Anthropic models
 }
 
 

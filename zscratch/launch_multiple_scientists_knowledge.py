@@ -55,6 +55,8 @@ def generate_cmd(
         f"slurm_config_args.qos={qos}",
         f"science_runner_args.max_n_nodes={max_n_nodes}",
     ]
+    if 'claude' in model_name:
+        cmd.append("coder_args.stream=False")
 
     if science_runner == 'bon':
         cmd.append(f"science_runner_args.n_hypotheses={n_hypotheses}")
@@ -102,8 +104,8 @@ def main():
     parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', default=[-1], help="List of record numbers to sweep over")
     parser.add_argument("--env_number", type=int, default=1, help="Environment number")
-    # modelname can be deepseek_r1, gemini_2_5, or o3_mini 
-    parser.add_argument("--model_name", type=str, default="deepseek_r1", choices=['deepseek_r1', 'gemini_2_5', 'o3_mini'], help="Model name")
+    # modelname can be deepseek_r1, gemini_2_5, claude_3_5_sonnet, or o3_mini 
+    parser.add_argument("--model_name", type=str, default="deepseek_r1", help="Model name")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
     parser.add_argument("--science_runner", type=str, default="bon", help="Science runner to use")
@@ -166,7 +168,7 @@ def main():
             raise ValueError(f"Environment number {args.env_number} not found")
 
     username = os.getlogin()
-    root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/0511_relaunch/"
+    root_workspace_path = f"/checkpoint/maui/{username}/scientist/workspace/claude/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
     executor.update_parameters(
             name=args.job_name,
