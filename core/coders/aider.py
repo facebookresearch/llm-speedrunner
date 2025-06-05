@@ -19,6 +19,7 @@ NAME_TO_AIDER_MODEL_NAME = {
     'o3-mini': 'azure/o3-mini',
     'gemini-2.5-pro': 'gemini/gemini-2.5-flash-preview-04-17',
     'claude-3-5-sonnet': 'openai/claude-3-5-sonnet', # for calling the openai compatible API for Anthropic models
+    'claude-3-7-sonnet': 'openai/claude-3-7-sonnet', # for calling the openai compatible API for Anthropic models
 }
 
 
@@ -56,6 +57,7 @@ class AiderCoder(Agent):
         log_llm_metrics=False,
         stream=False,
         edit_format='diff',
+        strict_diff_format=False,
         max_reflections=5,
         detect_urls=False,
         use_temperature: Union[bool, float] = False,
@@ -88,6 +90,7 @@ class AiderCoder(Agent):
             edit_format=edit_format,
             summarize_from_coder=True,
         )
+        self.strict_diff_format = strict_diff_format # this is used to enforce the model to follow the diff format strictly
         self._coder.max_reflections = max_reflections
         self._coder.detect_urls = detect_urls
         self._coder.abs_read_only_fnames = abs_read_only_fnames
