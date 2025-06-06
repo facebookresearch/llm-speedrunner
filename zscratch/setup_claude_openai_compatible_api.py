@@ -1,4 +1,3 @@
-from flask import Flask, request, jsonify
 """
 A Flask API that provides access to AWS Bedrock's Claude models through a chat completions endpoint.
 The API mimics OpenAI's chat completions interface but routes requests to AWS Bedrock Claude models.
@@ -36,15 +35,17 @@ Raises:
     400: If an invalid model is specified
     500: For other errors during processing
 """
+from flask import Flask, request, jsonify, Response
 import boto3
 from botocore.config import Config
 import json
 import os
+import time
 
 app = Flask(__name__)
 
 def get_bedrock_client():
-    config = Config(read_timeout=60*30)
+    config = Config(read_timeout=60*60)
     sts = boto3.client("sts", config=config)
     response = sts.assume_role(
         RoleArn="arn:aws:iam::396608793503:role/BedrockReadOnly",
@@ -154,6 +155,81 @@ def truncate_to_token_limit(body, max_tokens=121070):
     
     return truncated_body
 
+def generate_streaming_response(bedrock, body, model_id, model_name):
+    """Generate streaming response from Bedrock"""
+    try:
+        response = bedrock.invoke_model_with_response_stream(
+            body=body,
+            modelId=model_id
+        )
+        
+        completion_id = "chatcmpl-" + os.urandom(12).hex()
+        created_timestamp = int(time.time())
+        
+        # Send initial chunk
+        initial_chunk = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created_timestamp,
+            "model": "openai/" + model_name,
+            "choices": [{
+                "index": 0,
+                "delta": {"role": "assistant", "content": ""},
+                "finish_reason": None
+            }]
+        }
+        yield f"data: {json.dumps(initial_chunk)}\n\n"
+        
+        # Process streaming response
+        stream = response.get('body')
+        if stream:
+            for event in stream:
+                chunk = event.get('chunk')
+                if chunk:
+                    chunk_obj = json.loads(chunk.get('bytes').decode())
+                    
+                    if chunk_obj['type'] == 'content_block_delta':
+                        delta_chunk = {
+                            "id": completion_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_timestamp,
+                            "model": "openai/" + model_name,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {"content": chunk_obj['delta']['text']},
+                                "finish_reason": None
+                            }]
+                        }
+                        yield f"data: {json.dumps(delta_chunk)}\n\n"
+                    
+                    elif chunk_obj['type'] == 'message_stop':
+                        # Send final chunk
+                        final_chunk = {
+                            "id": completion_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_timestamp,
+                            "model": "openai/" + model_name,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {},
+                                "finish_reason": "stop"
+                            }]
+                        }
+                        yield f"data: {json.dumps(final_chunk)}\n\n"
+                        break
+        
+        # Send [DONE] marker
+        yield "data: [DONE]\n\n"
+        
+    except Exception as e:
+        error_chunk = {
+            "error": {
+                "message": str(e),
+                "type": "server_error"
+            }
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
+
 @app.route('/v1/chat/completions', methods=['POST'])
 @app.route('/chat/completions', methods=['POST'])
 def chat_completions():
@@ -166,7 +242,9 @@ def chat_completions():
                 break
         messages = data.get('messages', [])
         max_tokens = data.get('max_tokens', 8192)
-        print(f"Max tokens: {max_tokens}")
+        stream = data.get('stream', False)
+        
+        print(f"Max tokens: {max_tokens}, Stream: {stream}")
 
         if model not in MODEL_MAP:
             return jsonify({"error": "Invalid model"}), 400
@@ -189,45 +267,70 @@ def chat_completions():
         if system_message:
             body["system"] = system_message
         body = truncate_to_token_limit(body)
-        body = json.dumps(body)
+        body_json = json.dumps(body)
 
-        response = bedrock.invoke_model(
-            body=body,
-            modelId=MODEL_MAP[model]
-        )
-        response_body = json.loads(response.get("body").read())
-        # __import__("ipdb").set_trace()  # For debugging purposes, remove in production
-        created_timestamp = response.get("ResponseMetadata", {}).get("HTTPHeaders", {}).get("date", "0")
-        if not created_timestamp:
-            created_timestamp = 0
+        if stream:
+            # Return streaming response
+            return Response(
+                generate_streaming_response(bedrock, body_json, MODEL_MAP[model], model),
+                content_type='text/plain; charset=utf-8',
+                headers={
+                    'Cache-Control': 'no-cache',
+                    'Connection': 'keep-alive',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type'
+                }
+            )
         else:
-            from datetime import datetime
-            created_timestamp = int(datetime.strptime(created_timestamp, '%a, %d %b %Y %H:%M:%S GMT').timestamp())
-            created_timestamp = created_timestamp
+            # Non-streaming response (original behavior)
+            response = bedrock.invoke_model(
+                body=body_json,
+                modelId=MODEL_MAP[model]
+            )
+            response_body = json.loads(response.get("body").read())
+            
+            created_timestamp = response.get("ResponseMetadata", {}).get("HTTPHeaders", {}).get("date", "0")
+            if not created_timestamp:
+                created_timestamp = 0
+            else:
+                from datetime import datetime
+                created_timestamp = int(datetime.strptime(created_timestamp, '%a, %d %b %Y %H:%M:%S GMT').timestamp())
 
-        print(f"Response body: \n{response_body.get('content', '')}")
+            print(f"Response body: \n{response_body.get('content', '')}")
 
-        return jsonify({
-            "id": "chatcmpl-" + os.urandom(12).hex(),
-            "object": "chat.completion",
-            "created": created_timestamp,
-            "model": "openai/" + model,
-            "choices": [{
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": response_body.get("content", "")[0].get("text", "")
-                },
-                "finish_reason": "stop"
-            }],
-            "usage": {
-                "prompt_tokens": response_body.get("usage", {}).get("input_tokens", 0),
-                "completion_tokens": response_body.get("usage", {}).get("output_tokens", 0),
-            }
-        })
+            return jsonify({
+                "id": "chatcmpl-" + os.urandom(12).hex(),
+                "object": "chat.completion",
+                "created": created_timestamp,
+                "model": "openai/" + model,
+                "choices": [{
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": response_body.get("content", "")[0].get("text", "")
+                    },
+                    "finish_reason": "stop"
+                }],
+                "usage": {
+                    "prompt_tokens": response_body.get("usage", {}).get("input_tokens", 0),
+                    "completion_tokens": response_body.get("usage", {}).get("output_tokens", 0),
+                }
+            })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        if stream:
+            def error_stream():
+                error_chunk = {
+                    "error": {
+                        "message": str(e),
+                        "type": "server_error"
+                    }
+                }
+                yield f"data: {json.dumps(error_chunk)}\n\n"
+            return Response(error_stream(), content_type='text/plain; charset=utf-8')
+        else:
+            return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
 
