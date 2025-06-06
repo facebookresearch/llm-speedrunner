@@ -58,7 +58,7 @@ def generate_cmd(
         f"science_runner_args.max_n_nodes={max_n_nodes}",
     ]
     if 'claude' in model_name:
-        cmd.append("coder_args.stream=False")
+        # cmd.append("coder_args.stream=False")
         cmd.append(f"model_url={model_url}")
 
     if science_runner == 'bon':
