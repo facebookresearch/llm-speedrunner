@@ -37,13 +37,15 @@ Raises:
     500: For other errors during processing
 """
 import boto3
+from botocore.config import Config
 import json
 import os
 
 app = Flask(__name__)
 
 def get_bedrock_client():
-    sts = boto3.client("sts")
+    config = Config(read_timeout=60*30)
+    sts = boto3.client("sts", config=config)
     response = sts.assume_role(
         RoleArn="arn:aws:iam::396608793503:role/BedrockReadOnly",
         RoleSessionName="aira",
@@ -64,6 +66,94 @@ MODEL_MAP = {
     "claude-4-opus": "arn:aws:bedrock:us-west-2:396608793503:inference-profile/us.anthropic.claude-opus-4-20250514-v1:0"
 }
 
+import tiktoken
+def count_tokens(text, model="gpt-4"):
+    """Count tokens using OpenAI's tiktoken library"""
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+        return len(encoding.encode(text))
+    except Exception as e:
+        print(f"Error counting tokens: {e}")
+        # Fallback to character-based counting if tiktoken fails
+        return len(text) // 6
+
+def truncate_to_token_limit(body, max_tokens=121070):
+    """
+    Truncate the conversation to keep only the most recent tokens within the limit.
+    Assumes body contains messages in OpenAI format.
+    """
+    if not isinstance(body, dict) or 'messages' not in body:
+        return body
+    
+    messages = body['messages']
+    if not messages:
+        return body
+    
+    # Calculate tokens for each message
+    message_tokens = []
+    total_tokens = 0
+    
+    # Process messages in reverse order (most recent first)
+    for i in range(len(messages) - 1, -1, -1):
+        message = messages[i]
+        content = message.get('content', '')
+        if isinstance(content, list):
+            # Handle multi-part content (text + images)
+            text_content = ''
+            for part in content:
+                if isinstance(part, dict) and part.get('type') == 'text':
+                    text_content += part.get('text', '')
+        else:
+            text_content = str(content)
+        
+        tokens = count_tokens(text_content)
+        message_tokens.append((i, tokens, message))
+        total_tokens += tokens
+    
+    # If within limit, return original body
+    if total_tokens <= max_tokens:
+        print(f"Total tokens {total_tokens} within limit {max_tokens}. No truncation needed.")
+        return body
+    
+    # Truncate messages, keeping the most recent ones
+    kept_messages = []
+    current_tokens = 0
+    
+    # Always keep the system message if it exists and is first
+    system_message = None
+    if 'system' in body:
+        # system_message = messages[0]
+        system_message = body['system']
+        system_tokens = count_tokens(str(system_message))
+        current_tokens += system_tokens
+    
+    # Add messages from most recent, staying within token limit
+    for i, tokens, message in message_tokens:
+        if current_tokens + tokens <= max_tokens:
+            kept_messages.append((i, message))
+            current_tokens += tokens
+        else:
+            break
+    
+    # Sort kept messages by original index to maintain conversation order
+    kept_messages.sort(key=lambda x: x[0])
+    
+    # Reconstruct the body with truncated messages
+    new_messages = []
+    if system_message:
+        # new_messages.append(system_message)
+        body['system'] = system_message
+    
+    new_messages.extend([msg for _, msg in kept_messages])
+    
+    truncated_body = body.copy()
+    truncated_body['messages'] = new_messages
+    
+    print(f"Truncated conversation: {len(messages)} -> {len(new_messages)} messages")
+    print(f"Token count: {total_tokens} -> {current_tokens} tokens")
+    
+    return truncated_body
+
 @app.route('/v1/chat/completions', methods=['POST'])
 @app.route('/chat/completions', methods=['POST'])
 def chat_completions():
@@ -75,7 +165,7 @@ def chat_completions():
                 model = key
                 break
         messages = data.get('messages', [])
-        max_tokens = data.get('max_tokens', 200000)
+        max_tokens = data.get('max_tokens', 8192)
         print(f"Max tokens: {max_tokens}")
 
         if model not in MODEL_MAP:
@@ -98,6 +188,7 @@ def chat_completions():
         }
         if system_message:
             body["system"] = system_message
+        body = truncate_to_token_limit(body)
         body = json.dumps(body)
 
         response = bedrock.invoke_model(
