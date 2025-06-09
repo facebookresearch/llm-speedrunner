@@ -54,3 +54,5 @@ submitit_logs/
 logs/
 *.pt
 
+# hint md files
+data/nanogpt_speedrun_knowledge_in_levels/*/*.md
