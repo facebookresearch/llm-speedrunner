@@ -11,9 +11,8 @@ class Agent:
         system_prompt: Optional[str] = None,
         log_llm_metrics=False,
         secrets: Optional[dict[str: str]] = None,
-        api_version: Optional[str] = None
-        ):
-
+        api_version: Optional[str] = None,
+    ):
         api_key = None
         if secrets:
             for k, v in secrets.items():
