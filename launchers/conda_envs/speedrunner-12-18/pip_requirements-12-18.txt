@@ -208,7 +208,6 @@ python-dotenv==1.0.1
 python-json-logger==3.3.0
 python-multipart==0.0.20
 python-slugify==8.0.4
-pytorch-triton==3.3.0+git96316ce5
 pytz==2025.1
 pyyaml==6.0.2
 pyzmq==26.2.0
