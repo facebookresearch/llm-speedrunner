@@ -115,7 +115,6 @@ mistral-common==1.5.4
 mistune==3.1.1
 mixpanel==4.10.1
 ml-dtypes==0.4.1
-mlebench==1.0.0
 monotonic==1.6
 mpmath==1.3.0
 msgpack==1.1.0
