@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 """Launch the LLM agent runs corresponding to the baselines of the paper
 
 # In order to replicate the results, replace fake_account/fake_qos with your actuall account/qos 

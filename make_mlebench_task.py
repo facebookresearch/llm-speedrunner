@@ -1,3 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+
 """Automatically create the necessary config and workspace template for an MLE-Bench task.
 
 Creates a task config at config/task/mlebench/<task id>.yaml, and creates a workspace template
