@@ -43,7 +43,7 @@ gunicorn
 pydantic==2.10.6
 pyyaml==6.0.2
 tqdm==4.67.1
-requests==2.32.3
+requests==2.32.4
 regex
 submitit
 hydra-core
