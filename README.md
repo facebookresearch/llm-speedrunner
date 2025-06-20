@@ -172,6 +172,11 @@ Importantly, if you want to block thread execution until all observed jobs are f
 
 Under the hood, JobObserver manages a set of `asyncio` tasks that regularly polls for the status of each observed job. This means the main function for each scientist script must be run as `asyncio.run(main())`, so that the asyncio run loop is properly initialized (see `climb_nanogpt.py` or `climb_collatz.py` for examples).
 
+### License
+
+LLM-speedrunner has a Creative Commons public license, as  found in the [LICENSE](LICENSE) file.
+
+
 
 
 
