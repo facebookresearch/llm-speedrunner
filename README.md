@@ -1,4 +1,4 @@
-# 🧪 Meta AI Scientist
+# 🏃‍♀️ LLM Speedrunner
 
 This is an early proof-of-concept of an automated scientist agent, with a focus on running ML experiments.
 
