@@ -6,9 +6,9 @@
 
 """Launch the LLM agent runs corresponding to the baselines of the paper
 
-# In order to replicate the results, replace fake_account/fake_qos with your actuall account/qos 
+# In order to replicate the results, replace maui/maui_high with your actuall account/qos 
 # and run the following commands.
-# First, run for records 1-11 (we omit record 6 due to PyTorch upgrade):
+# Example run for record 11:
 conda activate environment-1-11
 python launchers/launch_llm_speedrun_agent_additional_knowledge.py \
 --job_name baselines_records_1_11 \
@@ -37,7 +37,7 @@ def str2bool(v):
 def generate_cmd(
     record_number: int,
     model_name: str = "deepseek_r1",
-    qos: str = "fake_qos",
+    qos: str = "maui_high",
     n_iterations: int = 10,
     ideator: str = "dummy",
     science_runner: str = "bon",
@@ -138,7 +138,7 @@ def set_agent_search_parameters(search, args):
 def main():
     parser = argparse.ArgumentParser(description="Submitit launcher for scientist jobs with knowledge source paths.")
     parser.add_argument("--job_name", type=str, default="knowledge_sweep", help="Job name")
-    parser.add_argument("--qos", type=str, default="fake_qos", help="Quality of service")
+    parser.add_argument("--qos", type=str, default="maui_high", help="Quality of service")
     parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', required=True, help="List of record numbers to sweep over")
     parser.add_argument("--models", type=str, nargs='+', default=['deepseek_r1', 'o3_mini'], help="Frontier models powering the agent")

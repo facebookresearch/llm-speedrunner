@@ -6,7 +6,7 @@
 
 """Launch the LLM agent runs corresponding to the baselines of the paper
 
-# In order to replicate the results, replace fake_account/fake_qos with your actuall account/qos 
+# In order to replicate the results, replace maui/maui_high with your actuall account/qos 
 # and run the following commands.
 # First, run for records 1-11 (we omit record 6 due to PyTorch upgrade):
 conda activate environment-1-11
@@ -53,7 +53,7 @@ def str2bool(v):
 def generate_cmd(
     record_number: int,
     model_name: str = "deepseek_r1",
-    qos: str = "fake_qos",
+    qos: str = "maui_high",
     n_iterations: int = 10,
     ideator: str = "dummy",
     science_runner: str = "bon",
@@ -155,10 +155,10 @@ def set_agent_search_parameters(search, args):
 def main():
     parser = argparse.ArgumentParser(description="Submitit launcher for scientist jobs with knowledge source paths.")
     parser.add_argument("--job_name", type=str, default="knowledge_sweep", help="Job name")
-    parser.add_argument("--qos", type=str, default="fake_qos", help="Quality of service")
+    parser.add_argument("--qos", type=str, default="maui_high", help="Quality of service")
     parser.add_argument("--max_n_nodes", type=int, default=20, help="Maximum number of nodes to use")
     parser.add_argument("--record_numbers", type=int, nargs='+', required=True, help="List of record numbers to sweep over")
-    parser.add_argument("--models", type=str, nargs='+', default=['deepseek_r1', 'o3_mini'], help="Frontier models powering the agent")
+    parser.add_argument("--models", type=str, nargs='+', default=['deepseek_r1', 'o3_mini', 'gemini_2_5', 'claude_3_7_sonnet'], help="Frontier models powering the agent")
     parser.add_argument("--n_iterations", type=int, default=20, help="Number of iterations")
     parser.add_argument("--ideator", type=str, default="dummy", help="Ideator to use")
     parser.add_argument("--science_runner", type=str, default="bon", help="Science runner to use")
@@ -175,7 +175,7 @@ def main():
     parser.add_argument("--searches", type=str, nargs='+', default=['flat', 'tree', 'forest', 'aide', 'multi-aide'], help="Search variants to use")
     args = parser.parse_args()
 
-    account = "fake_account"
+    account = "maui"
     username = os.getlogin()
     root_workspace_path = f"/checkpoint/{account}/{username}/scientist/workspace/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
