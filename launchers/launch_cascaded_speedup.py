@@ -15,7 +15,8 @@ This script implements a cascaded experiment where:
 4. Compute average training time reduction across transitions
 5. Identify where agent breaks down and gets no more speedups
 
-python zscratch/launch_cascaded_speedup.py \
+conda activate environment-1-11
+python launch_cascaded_speedup.py \
 --job_name cascaded_speedup \
 --model_names deepseek_r1 gpt4 \
 --n_iterations 10

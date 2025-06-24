@@ -25,7 +25,7 @@ python launchers/launch_llm_speedrun_agent_baselines.py \
 --ideator dummy 
 
 # Finally, for records 19-21:
-conda activate records-19-21
+conda activate environment-19-21
 python launchers/launch_llm_speedrun_agent_baselines.py \
 --job_name baselines_records_19_20 \
 --record_numbers 19 20 \
