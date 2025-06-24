@@ -177,14 +177,14 @@ def filter_folder_info(folder_info, conditions):
             filtered_folder_info[folder_name] = info
     return filtered_folder_info
 
-workspace_base_path = lambda item: os.path.join('/home/user123456/scientist/workspace', item)
-old_workspace_base_path = lambda item: os.path.join('/home/user123456/scientist/old_workspace/nanogpt_speedrun/', item)
+workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/workspace', item)
+old_workspace_base_path = lambda item: os.path.join('/checkpoint/maui/zhaobc/scientist/old_workspace/nanogpt_speedrun/', item)
 list_of_base_paths = [
-    '/home/user123456/scientist/workspace', 
-    '/home/user123456/scientist/old_workspace/nanogpt_speedrun/',
-    '/home/user123456/scientist/workspace/0507_relaunch/',
-    '/home/user123456/scientist/workspace/0511_relaunch/',
-    '/home/user123456/scientist/workspace/r1_relaunch/',
+    '/checkpoint/maui/zhaobc/scientist/workspace', 
+    '/checkpoint/maui/zhaobc/scientist/old_workspace/nanogpt_speedrun/',
+    '/checkpoint/maui/zhaobc/scientist/workspace/0507_relaunch/',
+    '/checkpoint/maui/zhaobc/scientist/workspace/0511_relaunch/',
+    '/checkpoint/maui/zhaobc/scientist/workspace/r1_relaunch/',
 ]
 from plot_progress import gather_metrics
 
@@ -430,8 +430,8 @@ if __name__ == "__main__":
     base_dir = "workspaces/nanogpt_speedrun"
     folder_info = find_levels_in_configs_glob(
         [
-            '/home/user123456/scientist/workspace/nanogpt_speedrun/record_*_20250404_*',
-            '/home/user123456/scientist/workspace/nanogpt_speedrun/record_*_20250405_*'
+            '/checkpoint/maui/zhaobc/scientist/workspace/nanogpt_speedrun/record_*_20250404_*',
+            '/checkpoint/maui/zhaobc/scientist/workspace/nanogpt_speedrun/record_*_20250405_*'
         ]
     )
     print("Folder information:")

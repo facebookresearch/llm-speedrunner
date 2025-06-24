@@ -20,7 +20,7 @@ The structure of the folder is as follows:
 - `config`, `core`, `util` contains code and configurations to run the experiments
 - `data/nanogpt_speedrun_knowledge_in_levels` and `workspace_templates/nanogpt_speedrun` contain the benchmark data that are fed as input to the agent
 - `launchers` contains the scripts for launching the baseline and additional experiments and the conda environments for the experiments.
-- `data_analyses` contains the jupyter notebooks for computing similarity scores, running the analyses and generating the plots of the paper
+- `data_analyses` contains the jupyter notebooks for running the analyses and generating the plots of the paper
 - the rest of README provides generic instructions for usage of the agent
 
 
