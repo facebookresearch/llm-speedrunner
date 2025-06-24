@@ -16,7 +16,7 @@ This script implements a cascaded experiment where:
 5. Identify where agent breaks down and gets no more speedups
 
 conda activate environment-1-11
-python launch_cascaded_speedup.py \
+python launchers/launch_cascaded_speedup.py \
 --job_name cascaded_speedup \
 --model_names deepseek_r1 gpt4 \
 --n_iterations 10

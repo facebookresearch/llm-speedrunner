@@ -158,7 +158,7 @@ def main():
     args = parser.parse_args()
 
     # make sure to anonymize this
-    account = "fake_account"
+    account = "maui"
     username = os.getlogin()
     root_workspace_path = f"/checkpoint/{account}/{username}/scientist/workspace/"
     executor = submitit.AutoExecutor(folder="submitit_logs/slurm_job_%j")
