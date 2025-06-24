@@ -1,119 +1,73 @@
-# 🧪 Meta AI Scientist
+# 🏃‍♀️ LLM Speedrunner
 
-This is an early proof-of-concept of an automated scientist agent, with a focus on running ML experiments.
 
-In the current framework, an LLM-based scientist agent (or team of such agents) repeatedly generates hypotheses, implements these hypotheses in code, executes these experiments as Slurm jobs, and summarizes the results of these jobs for the next iteration.
+This respository hosts the code and benchmark data for the arXiv paper "The Automated LLM Speedrunning Benchmark: Reproducing NanoGPT Improvements". In this paper, we introduce a benchmark which measures the ability of an LLM agent to reproduce scientific results in the area of LLM pretraining. The diagram below provides a high-level overview of the benchmark tasks.
 
-## 📋 Todos
-- [x] Create a single high-level `launch_scientist.py` integrated with `hydra` for config. 
-- [x] Refactor existing scientist scripts (`climb_nanogpt.py` and `climb_collatz.py`) to be configurations of a single structured `ScienceRunner` class
-	- [x] Break out hypothesis generation and hypothesis implementation logic into simple instances of `Ideator` and `Coder`.
-- [x] Enable `ScienceRunner` to run multiple experiments per iteration in parallel
-- [x] Add support for diff-based editors (e.g. via Aider-based Coders)
-- [x] Support third-party LLM APIs in Azure in `core.llm_client` and `core.coder.aider` (o1-preview support added.
-- [x] Add options to configure `BoNScienceRunner` to mimic the selection logic of `AIDE`.
-- [x] Add ability to condition on prior knowledge when formulating hypotheses.
-- [x] Integrate MLE-Bench tasks via a script to automatically import individual tasks via their competition IDs.
-- [x] Add ability to run jobs locally on the same machine that is running the scientist (set `slurm_config_args.use_local_runs=True`.
-- [x] Gracefully handle preemption and re-entry.
-- [ ] Add a basic web interface to explore a running or previous scientist run.
+<div align="center">
+    <img src="assets/benchmark-overview.png" alt="image info" width="700"/>
+</div>
+
+In order to assess the performance of frontier reasoning LLMs on our benchmark, we build a flexible search scaffold that enables the implementation of LLM agents that solve the benchmark tasks. The following image visualises the search carried out by our agent in the solution space and the various stages of each node in the search tree.
+
+<div align="center">
+    <img src="assets/speedrunner-overview.png" alt="image info" width="700"/>
+</div>
+
+
+## Folder structure
+
+The structure of the folder is as follows:
+- `config`, `core`, `util` contains code and configurations to run the experiments
+- `data/nanogpt_speedrun_knowledge_in_levels` and `workspace_templates/nanogpt_speedrun` contain the benchmark data that are fed as input to the agent
+- `launchers` contains the scripts for launching the baseline and additional experiments and the conda environments for the experiments.
+- `data_analyses` contains the jupyter notebooks for computing similarity scores, running the analyses and generating the plots of the paper
+- the rest of README provides generic instructions for usage of the agent
+
 
 ## Setup
 
-### Conda Environment
-
-There are two ways to setup the conda environment
-
-#### Clone @minqi's existing conda environment
-
+### Clone the repo and create conda environments
 ```
-conda create --name mle-bench-minqi --clone /home/minqijiang/miniconda3/envs/mle-bench
+    git clone git@github.com:facebookresearch/llm-speedrunner.git
+    cd llm-speedrunner
 ```
-
-While cloning an existing conda environment is not generally the recommended approach, in this case, we recommend doing this while we figure out the version conflicts when installing different packages.
-
-#### Create a new conda environment
-
-```
-conda env create -f environment.yaml
-```
-
-This approach is typically the recommended approach but in this case, we recommend not using this while we figure out the version conflicts when installing different packages.
+See `launchers/conda_envs/README.md` about how to create a conda environment for the various records.
 
 ### Setup API keys
 
-Copy `config/secrets/default.template.yaml` to `config/secrets/default.yaml` and add API keys to it. Ping @minqi or @shagunsodhani for the keys. Note that `config/secrets/` is added to `.gitigore` (with the exception of `config/secrets/default.template.yaml`) to avoid accidentally pushing the keys to github.
+Copy `config/secrets/default.template.yaml` to `config/secrets/default.yaml` and add API keys to it. Note that `config/secrets/` is added to `.gitignore` (with the exception of `config/secrets/default.template.yaml`) to avoid accidentally pushing the keys to github.
 
 ## Run examples
 
-#### r1
-First, spin up an instance of `r1-32b`:
-
-```bash
-python serve_vllm.py
+Run the LLM speedrunner for the first record of the benchmark:
+```
+python launch_scientist.py model=o3_mini task=nanogpt_speedrun/record_1
 ```
 
-Find the node id for this vllm job on Slurm and run one of the scientist scripts:
-```
-python launch_scientist.py node_id=<vllm node id> model=r1_32b task=collatz
-```
-
-#### o1-preview
-To use `o1-preview`, you do not need to spin up a separate server, as requests go to Meta's Azure instance:
-```bash
-python launch_scientist.py model=o1_preview task=collatz
-```
-
-#### AIDE
+### AIDE
 To run with AIDE-style search, explicitly set the science_runner type to `aide`:
 ```bash
 python launch_scientist.py \
-	model=o1_preview \
+	model=o3_mini \
 	science_runner=aide \
-	task=collatz
+	task=nanogpt_speedrun/record_1
 ```
 
-#### Knowledge sources
+### Knowledge sources
 To pass in external knowledge sources that then inform the idea generation stage, pass in a list of file paths or glob strings to the source files (note the quotations around the argument and value here):
 ```bash
 python launch_scientist.py \
-	model=o1_preview \
-	task=collatz \
-	'knowledge_src_paths=["data/knowledge_nanogpt/*.md"]'
+	model=r1_32b \
+	task=nanogpt_speedrun/record_1 \
+	knowledge_src_paths=["data/nanogpt_speedrun_knowledge_in_levels/record_1/level_1_*.txt"]
 ```
 
 See the available models and tasks under `config/model` and `config/task` respectively. You can pass the name of any of these yaml files (without the extension) as the value for `launch_scientist.py`'s' model and task command-line arguments.
 
-### Adding a new task
-
-Adding a new task requires only a few steps:
-
-1. Create a new _workspace template_ as its own folder under `workspace_templates/`. This is the set of starting files available to the scientist. Whatever is in the task's workspace template is copied into the `v_1` workspace when running the scientist.
-
-2. Create a new task config under `config/task/`. Remember to set the header `# @package _global_`. See the existing configs for examples. In particular `collatz.yaml` provides an example for experiments requiring only CPUs, `picogpt.yaml`, requiring GPUs, and `nanogpt.yaml` requiring GPUs and the use of `torchrun`.
-
-3. Change the value of task in `config/default.yaml` to the name of your task's yaml file created above (or create your own top-level config with `task` configured appropriately).
-
-#### Automatically import an MLE-Bench task
-
-Before adding any Kaggle, first make sure you have stored your kaggle login credentials at `~/.kaggle/kaggle.json`.
-
-You can use the script `make_mlebench_task.py` to automatically generate a scientist task config based on an MLE-Bench task's competition ID. The below command will generate the necessary files in `task/config/mlebench` and `workspace_templates/mlebench` for MLE-Bench task `random_acts_of_pizza`:
-```bash
-python make_mlebench_task.py \
---task_id=random-acts-of-pizza \
---cache_dir_path=/path/for/storing/kaggle/datasets \
---lower_is_better
-```
-
-The first time you run this command for a new MLE-Bench task, you will be asked to visit the competition page in your browser to accept the competition rules.
-
-You can then run the scientist with this task as follows by specifying the task in the launch command as follows: `python launch_scientist.py task=mlebench/random_acts_of_pizza`. Note that we convert the task ID (also referred to as "competition ID") from kebab to snake case. 
-
 ## Design
 The automated "science loop" consists of a few common stages:
 
-**Ideation:** Generating new ideas for hypotheses to test and implementation changes to try.
+**Ideation:** Generating new ideas for hypotheses to test and implementation changes to try (please note that we disable this stage for the NeurIPS submission experiments, by using a dummy ideator)
 
 **Experiment implementation:** Coding the experiments that test the ideas produced in the ideation stage.
 
@@ -131,11 +85,11 @@ This codebase is designed with the following goals in mind:
 
 
 ### The core science loop
-The science loop can be implemented via either of two existing runners (or with any custom logic via your own subclass of `ScienceRunner`): 
+The science loop can be implemented via either of two existing runners (or with any custom logic via your own subclass of `ScienceRunner`):
 - `ScienceRunner` is unstructured in its run logic, allowing for maximum flexibility.
 - `BoNScienceRunner` inherits from `ScienceRunner`, and follows a set, structured sequence of steps corresponding to the common stages above, with freedom around how often they are each run and parallelized per iteration. In particular, a batch `n_hypotheses` hypotheses are generated in a single iteration, and a `selection_metric` can be defined via the `ExperimentConfig` passed into the runner in order to select the best hypothesis found so far. This hypothesis is then used as the starting point for the the next iteration of the science loop.
 
-In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Coder` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.coders` serve as central registries for Ideator and Coder subclasses, making it easy to define combinations of ideator and coder strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries. 
+In the `BoNScienceRunner`, ideation and implementation are handled by instances of the `Ideator` and `Coder` classes respectively, which all subclass `Agent` (see the Agent section below). The modules `core.ideators` and `core.coders` serve as central registries for Ideator and Coder subclasses, making it easy to define combinations of ideator and coder strategies, which can all be set with a single line in the top-level hydra config. Moreover, the `BoNScienceRunner` also receives a simple instance of `Agent` (under the `assistant` property), which is used for handling one-off LLM queries.
 
 #### Why explict modules?
 Having explicit implementations for `Ideator` and `Coder` variants is useful, as these strategies will be valuable to run in isolation, either for the purposes of evaluation (per-stage evals) or for handling independent endpoints in downstream integrations (e.g. giving Metamate an "ideation" or "experiment implementation" skill).
@@ -146,38 +100,8 @@ Each system-prompted LLM instance is abstracted as an agent, with an `act` metho
 
 
 ### Versioned workspaces
-Each scientist run is encapsulated in its own subdirectory inside the `workspaces` directory (auto-generated on first run). 
+Each scientist run is encapsulated in its own subdirectory inside the `workspaces` directory (auto-generated on first run).
 
-Each experiment implemented by the scientist during a run corresponds to a _version_ of an initial _workspace template_, a directory of files and potentially nested subdirectories. Workspace templates provides the initial project contents that serve as a starting point for the scientist to begin its experimentation. 
+Each experiment implemented by the scientist during a run corresponds to a _version_ of an initial _workspace template_, a directory of files and potentially nested subdirectories. Workspace templates provides the initial project contents that serve as a starting point for the scientist to begin its experimentation.
 
 When the workspace is first created, `v_1` (version 1) is initialized by copying the specified workspace template. Each experiment iteration corresponds to branching (i.e. copying) the previous version into a new version (e.g. `v_1 -> v_2`) and making changes in the new version directory. In this way, workspaces track the full history over arbitrary trees of codebases that may be created during the course of a scientist run.
-
-
-### JobObserver
-A core object in this framework is the `JobObserver`, in particular, its shared, singleton instance, `JobObserver.shared`. This object can be used to _observe_ the status of any Slurm job created via `submitit`, as encapsulated by its corresponding `Job` instance. 
-
-The below function call will ask the JobObserver singleton to start watching `job`, executing the `callback` function when the job finishes running (either on successful completion or some other form of termination).
-
-```
-slurm_utils.JobObserver.shared.observe(
-	job=job,
-	metadata={'hypothesis': hypothesis},  # Any serializable dictionary
-	callback=lambda res: print(res)
-)
-```
-
-Importantly, if you want to block thread execution until all observed jobs are finished, you should perform the following call:
-
-`await slurm_utils.JobObserver.shared.wait()`
-
-Under the hood, JobObserver manages a set of `asyncio` tasks that regularly polls for the status of each observed job. This means the main function for each scientist script must be run as `asyncio.run(main())`, so that the asyncio run loop is properly initialized (see `climb_nanogpt.py` or `climb_collatz.py` for examples).
-
-### License
-
-LLM-speedrunner has a Creative Commons public license, as  found in the [LICENSE](LICENSE) file.
-
-
-
-
-
-
