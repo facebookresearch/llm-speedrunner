@@ -15,10 +15,9 @@ This script implements a cascaded experiment where:
 4. Compute average training time reduction across transitions
 5. Identify where agent breaks down and gets no more speedups
 
-python zscratch/launch_cascaded_speedup.py \
---job_name cascaded_speedup \
---model_names deepseek_r1 gpt4 \
---n_iterations 10
+conda activate environment-1-11
+python launchers/launch_cascaded_speedup.py \
+--job_name cascaded_speedup 
 """
 from typing import Optional, List, Dict, Tuple
 import os
@@ -246,7 +245,7 @@ def run_cascaded_experiment(
             nodes=1,
             tasks_per_node=1,
             cpus_per_task=8,
-            timeout_min=6*24*60,  # 6 days
+            timeout_min=5*24*60,  # 5 days
             slurm_account="maui",
             slurm_qos="dev", # dev
             slurm_array_parallelism=array_parallelism,
