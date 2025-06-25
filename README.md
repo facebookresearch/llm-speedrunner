@@ -26,7 +26,7 @@ You can read more about this benchmark in our paper, ["The Automated LLM Speedru
 | `data/nanogpt_speedrun_knowledge_in_levels` | Hint data used by the speed‑run tasks                                                               |
 | `conda_envs`                                | Conda environment requirement files, one per speed‑run task set                                     |
 | `launchers`                                 | Convenience launch scripts for different experiment settings                                        |
-| `data_analyses`                             | Jupyter notebooks that generate the analyses and plots presented in the paper                       |
+| `analysis`                                  | Jupyter notebooks that generate the analyses and plots presented in the paper                       |
 
 
 ## Setup
