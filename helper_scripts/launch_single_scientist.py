@@ -4,9 +4,9 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-"""Launch multiple scientist runs
+"""Launch single scientist run
 
-python zscratch/launch_multiple_scientists.py \
+python launch_single_scientist.py \
 --job_name ngpt_100it
 """
 from typing import Optional
@@ -37,11 +37,6 @@ def run_scientist(
         f"science_runner=bon",
         f"exp_config_args.selection_metric=val_loss",
         f"exp_config_args.metrics_at_most=null",
-        # leaving these here for future test runs
-        # f"science_runner_args.max_bug_depth={max_bug_depth}",
-        # f"science_runner_args.debug_prob={debug_prob}",
-        # f"science_runner_args.n_initial_hypotheses={n_initial_hypotheses}",
-        # f"science_runner_args.n_hypotheses={n_hypotheses}",
     ]
     
 

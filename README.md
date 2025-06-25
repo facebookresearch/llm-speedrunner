@@ -57,7 +57,7 @@ python launch_scientist.py \
 To pass in external knowledge sources that then inform the idea generation stage, pass in a list of file paths or glob strings to the source files (note the quotations around the argument and value here):
 ```bash
 python launch_scientist.py \
-	model=r1_32b \
+	model=o3_mini \
 	task=nanogpt_speedrun/record_1 \
 	knowledge_src_paths=["data/nanogpt_speedrun_knowledge_in_levels/record_1/level_1_*.txt"]
 ```
