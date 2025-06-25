@@ -6,7 +6,7 @@
 
 """Launch multiple scientist runs
 
-python zscratch/launch_multiple_scientists.py \
+python launch_multiple_scientists.py \
 --job_name aide_bon_runs 
 """
 from typing import Optional

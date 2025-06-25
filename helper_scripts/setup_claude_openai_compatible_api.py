@@ -8,6 +8,12 @@
 A Flask API that provides access to AWS Bedrock's Claude models through a chat completions endpoint.
 The API mimics OpenAI's chat completions interface but routes requests to AWS Bedrock Claude models.
 Supports Claude 3.5 Sonnet, 3.7 Sonnet, 4 Sonnet and 4 Opus models.
+To spin up the proxy server, run:
+    gunicorn -w 16 -b 0.0.0.0:8000 setup_claude_openai_compatible_api:app --timeout 1800
+The --timeout argument is important because Claude takes a long time to respond to long prompts. After 
+spinning the server, point the model_url to http://localhost:8000/v1 
+This API supports both streaming and non-streaming responses; streaming generation prevents timeouts as 
+streaming will return one token as soon as it is generated.
 Example curl usage:
     curl http://localhost:8000/v1/chat/completions \
         -H "Content-Type: application/json" \
@@ -23,7 +29,7 @@ Example curl usage:
         }'
 Request Parameters:
     model (str): The model ID to use. Defaults to 'claude-3.5-sonnet'.
-                 Options: claude-3.5-sonnet, claude-3.7-sonnet, claude-4-sonnet, claude-4-opus
+                 Options: claude-3  .5-sonnet, claude-3.7-sonnet, claude-4-sonnet, claude-4-opus
     messages (list): List of message objects with 'role' and 'content' fields
     max_tokens (int): Maximum number of tokens to generate. Defaults to 256
 Returns:
@@ -40,6 +46,7 @@ Returns:
 Raises:
     400: If an invalid model is specified
     500: For other errors during processing
+
 """
 from flask import Flask, request, jsonify, Response
 import boto3

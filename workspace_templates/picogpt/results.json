@@ -1,9 +1,0 @@
-{	
-	"job_status": "COMPLETED",
-	"metrics": {
-		"test_loss": 0.658,
-		"test_acc": 0.215,
-	},
-	"hypothesis": "This is a minimalist implementation of a small GPT model that trains on a toy arithmetic task.",
-	"outcome_summary": "This basic implementation achieves a test accuracy of 0.215 after training for 10 epochs."
-}
