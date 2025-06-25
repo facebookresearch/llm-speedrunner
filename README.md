@@ -64,6 +64,45 @@ python launch_scientist.py \
 
 See the available models and tasks under `config/model` and `config/task` respectively. You can pass the name of any of these yaml files (without the extension) as the value for `launch_scientist.py`'s' model and task command-line arguments.
 
+
+## Benchmark usages
+
+There are four scenarios the `llm-speedrunner` repo can be used for:
+1. Evaluate frontier LLMs powering the LLM speedrunner agent by comparing benchmark performance
+2. Evaluate different prompts forming part of LLM speedrunner by comparing benchmark performance
+3. Evaluate different coding agents used by LLM speedrunner by comparing benchmark performance
+4. Add and solve new tasks using the flexible search scaffold provided in this repo
+
+Please see instructions about how to implement each of these.
+
+### Frontier LLM comparison
+
+In order to add a new model, you can: 
+- add a new yaml specification under `config/model/`
+- launch the [launch_llm_speedrun_agent_baselines](launchers/launch_llm_speedrun_agent_baselines.py) script by adjusting the `--models` argument
+
+Check out [llm_client](core/llm_client.py) and [aider](github/scientist/core/coders/aider.py) in case there are changes needed to satisfy requirements specific to your model setup. See [setup_claude_openai_compatible_api](github/scientist/helper_scripts/setup_claude_openai_compatible_api.py) for adjustments required to integrate Claude models available via AWS Bedrock with [aider](github/scientist/core/coders/aider.py).
+
+### Different prompts comparison
+
+In order to modify the prompts that are part of the agent scaffold you can change the corresponding config files, either related to the scaffold ( [aide.yaml](config/science_runner/aide.yaml), [bon.yaml](config/science_runner/bon.yaml)) or the LLM speedrunning tasks ([task/nanogpt_speedrun/default_config.yaml](config/task/nanogpt_speedrun/default_config.yaml), [task/config/default.yaml](config/default.yaml)).
+
+### Different coding agents comparison
+
+In order to swap in a different coding agent (we are currently supporting two, [coders/base.py](core/coders/base.py) and [coders/aider.py](core/coders/aider.py)) you can implement your own coding agent by extendign the `Agent` class adding the relevant yaml file under `config/coder`.
+
+### Addition of new tasks
+
+Adding a new task requires the following steps:
+
+1. Create a new _workspace template_ as its own folder under `workspace_templates/`. This is the set of starting files available to the agent. Whatever is in the task's workspace template is copied into the `v_1` workspace when running the scientist.
+
+2. Create a new task config under `config/task/` and set the header `# @package _global_` on top. See the existing configs for examples, e.g. `collatz.yaml` provides an example for experiments requiring only CPUs, whereas the tasks under `task/nanogpt_speedrun` require GPUs and the use of `torchrun`.
+
+3. Change the value of task in `config/default.yaml` to the name of your task's yaml file created above (or create your own top-level config with `task` configured appropriately).
+
+You can then launch the agent using [helper_scripts/launch_single_scientist.py](helper_scripts/launch_single_scientist.py)
+
 ## Design
 The automated "science loop" consists of a few common stages:
 

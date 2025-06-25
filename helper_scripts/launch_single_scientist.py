@@ -20,7 +20,7 @@ def run_scientist(
     cwd = os.getcwd()
     print("[INFO] Running in directory:", cwd)
 
-    task_name = "nanogpt_10112024"
+    task_name = "collatz"
     model_name = "deepseek_r1"
     n_iterations = 5
     n_hypotheses = 5
@@ -46,12 +46,12 @@ def run_scientist(
 
 def main():
     parser = argparse.ArgumentParser(description="Submitit launcher for scientist jobs.")
-    parser.add_argument("--job_name", type=str, default="many_scientists", help="Job name")
+    parser.add_argument("--job_name", type=str, default="single_scientist", help="Job name")
     args = parser.parse_args()
     
     executor = submitit.AutoExecutor(folder="submitit_logs")
     executor.update_parameters(
-            name=args.job_name or "very_many_scientists",
+            name=args.job_name or "only_one_scientist",
             nodes=1,
             tasks_per_node=1,
             cpus_per_task=32,
