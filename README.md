@@ -18,7 +18,7 @@ You can read more about this benchmark in our paper, ["The Automated LLM Speedru
 
 ## Folder structure
 
-| Folder / Path                               | Purpose                                                                                             |
+| Folder                                      | Contents                                                                                            |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `config`                                    | Hydra configuration files for every module involved in running an experiment                        |
 | `core` & `util`                             | Source code that implements the agent‑scaffolding logic                                             |
