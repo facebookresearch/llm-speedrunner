@@ -146,7 +146,7 @@ def generate_cmd(
     ideator: str = "dummy",
     science_runner: str = "bon",
     max_n_nodes: int = 20,
-    knowledge_level: str = "125",  # Fixed to L125
+    knowledge_level: str = "123",  # Fixed to L123
     no_knowledge: bool = False,
     pass_coder_knowledge: bool = False,
     aider_edit_format: str = "diff",

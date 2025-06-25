@@ -168,8 +168,6 @@ def main():
             tasks_per_node=1,
             cpus_per_task=8,
             timeout_min=5*24*60,  # 6 days
-            slurm_account=f"{account}",
-            slurm_qos="maui_high",
             slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []
