@@ -31,7 +31,7 @@ class KnowledgeStore:
             src_paths: A list of file paths or glob regex to load into the knowledge store.
             contents: A list of strings to add directly as entries into the knowledge store.
         """
-        self._entries = []  # msj: Eventually allow storing in a specified backend, e.g. SQLite.
+        self._entries = []
 
         if entries:
             for entry in entries:
@@ -64,8 +64,6 @@ class KnowledgeStore:
         as_string=True
     ) -> list[KnowledgeEntry] | str:
         """Read from the knowledge store. 
-
-        msj: Eventually support RAG-style search based on embedding distances.
 
         Args:
             query: Used to filter results in the store. 

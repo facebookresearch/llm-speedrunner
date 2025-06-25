@@ -16,7 +16,7 @@ This script implements a cascaded experiment where:
 5. Identify where agent breaks down and gets no more speedups
 
 conda activate environment-1-11
-python launchers/launch_cascaded_speedup.py \
+python launchers/launch_cumulative_speedup.py \
 --job_name cascaded_speedup 
 """
 from typing import Optional, List, Dict, Tuple

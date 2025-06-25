@@ -161,33 +161,3 @@ class LLMClient:
             )
 
         return final_res
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 5:
-        print("Usage: python llm_client.py <model_url> <model_name> <api_key> <api_version>")
-        sys.exit(1)
-
-    model_url = sys.argv[1]
-    print(f'model_url={model_url}')
-
-    api_key = sys.argv[3]
-    api_version = sys.argv[4]
-    model_name = sys.argv[2]
-    llm = LLMClient(model_url=model_url, model_name=model_name, log_metrics=True, api_key=api_key, api_version=api_version)
-
-
-    # for _ in range(10):
-    while True:
-        prompt = input("Enter prompt: ")
-        res = llm.generate(
-            prompt, 
-            # system_prompt='Respond as if you are Shrek.', 
-            show_thinking=True
-        )
-
-        print("RESPONSE:\n", res)
-        # print(res)
-
-    # llm.flush_logs('journal.jsonl')
-
