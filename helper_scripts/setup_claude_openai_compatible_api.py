@@ -29,7 +29,7 @@ Example curl usage:
         }'
 Request Parameters:
     model (str): The model ID to use. Defaults to 'claude-3.5-sonnet'.
-                 Options: claude-3  .5-sonnet, claude-3.7-sonnet, claude-4-sonnet, claude-4-opus
+                 Options: claude-3.5-sonnet, claude-3.7-sonnet, claude-4-sonnet, claude-4-opus
     messages (list): List of message objects with 'role' and 'content' fields
     max_tokens (int): Maximum number of tokens to generate. Defaults to 256
 Returns:
