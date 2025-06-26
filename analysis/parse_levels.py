@@ -186,7 +186,7 @@ list_of_base_paths = [
     '/checkpoint/maui/zhaobc/scientist/workspace/0511_relaunch/',
     '/checkpoint/maui/zhaobc/scientist/workspace/r1_relaunch/',
 ]
-from plot_progress import gather_metrics
+from plot_utils import gather_metrics
 
 def process_metrics(record, workspace_base_path=workspace_base_path, gather_metrics=gather_metrics, keep_k=None):
     for k, v in record.items():

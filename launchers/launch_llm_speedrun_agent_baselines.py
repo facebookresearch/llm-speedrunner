@@ -32,6 +32,7 @@ python launchers/launch_llm_speedrun_agent_baselines.py \
 --knowledge_levels z 1 2 5 [12] [125] \
 --ideator dummy 
 """
+
 from typing import Optional
 import os
 import subprocess
@@ -166,7 +167,7 @@ def main():
     parser.add_argument("--n_initial_hypotheses", type=int, default=1, help="Number of initial hypotheses")
     parser.add_argument("--aide_debug_prob", type=float, default=1.0, help="Debug probability for AIDE")
     parser.add_argument("--aide_max_bug_depth", type=int, default=50, help="Max bug depth for AIDE")
-    parser.add_argument("--knowledge_levels", nargs='+', default=['1', '2', '5', '[12]', '[125]'], type=str, help="Knowledge level to use in glob string format, e.g. 0 to only level 0, {0,1} to use level 0 and 1, etc.")
+    parser.add_argument("--knowledge_levels", nargs='+', default=['1', '2', '3', '[12]', '[123]'], type=str, help="Knowledge level to use in glob string format, e.g. 1 to only use level 1, {1,2} to use level 1 and 2, etc.")
     parser.add_argument("--array_parallelism", type=int, default=10, help="Number of jobs to run in parallel")
     parser.add_argument("--pass_coder_knowledge", type=str2bool, default=False, help="Whether or not to pass coder knowledge")
     parser.add_argument("--aider_edit_format", type=str, default="diff", help="Aider edit format")
@@ -185,8 +186,6 @@ def main():
             tasks_per_node=1,
             cpus_per_task=8,
             timeout_min=6*24*60,  # 6 days
-            slurm_account=f"{account}",
-            slurm_qos="maui_high",
             slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []

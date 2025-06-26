@@ -14,8 +14,8 @@ python launchers/launch_llm_speedrun_agent_additional_knowledge.py \
 --job_name record_11_flex_attention \
 --record_numbers 11 \
 --ideator dummy 
-
 """
+
 from typing import Optional
 import os
 import subprocess
@@ -168,8 +168,6 @@ def main():
             tasks_per_node=1,
             cpus_per_task=8,
             timeout_min=5*24*60,  # 6 days
-            slurm_account=f"{account}",
-            slurm_qos="maui_high",
             slurm_array_parallelism=args.array_parallelism,
         )
     jobs = []

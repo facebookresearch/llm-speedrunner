@@ -45,7 +45,4 @@ submitit_logs/
 # nanogpt run artifacts
 logs/
 *.pt
-*.jsonl
 
-# hint md files
-data/nanogpt_speedrun_knowledge_in_levels/*/*.md

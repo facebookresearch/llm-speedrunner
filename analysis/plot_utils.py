@@ -4,9 +4,68 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Optional
+import json
+import os
+import re
+
 import matplotlib.pyplot as plt
 import math
 import numpy as np
+import pandas as pd
+
+
+def gather_metrics(
+    workspace_path: str, 
+    metrics: list[str],
+    workspace_template_path: Optional[str] = None
+) -> pd.DataFrame:
+    data = {'step': []}
+    for m in metrics:
+        data[m] = []
+
+    step2path = {}
+
+    if workspace_template_path is not None:
+        initial_result_path = os.path.join(workspace_template_path, 'results.json')
+        if os.path.exists(initial_result_path):
+            step2path[0] = initial_result_path
+
+    # Gather metrics from version subdirectories
+    version_dir_pattern = re.compile(r"^v_(\d+)$")
+    for entry in os.scandir(workspace_path):
+        if entry.is_dir():
+            match = version_dir_pattern.match(entry.name)
+            if match:
+                step = int(match.group(1))
+                step2path[step] = os.path.join(entry.path, "results.json")
+
+    for step, results_path in step2path.items():
+        data['step'].append(step)
+        if os.path.isfile(results_path):
+            with open(results_path, "r") as f:
+                results_json = json.load(f)
+            metrics_dict = results_json.get("metrics", {})
+        else:
+            metrics_dict = {}
+
+        # Fill in metric values
+        for m in metrics:
+            value = metrics_dict.get(m, None)
+            data[m].append(value)
+    
+    # check which solutions are valid and print them out
+    for key, values in data.items():
+        if key == 'is_valid':
+            true_indices = [i for i, value in enumerate(values) if value]
+            if true_indices:
+                print(f"Indices of valid versions: {true_indices}")
+                
+    df = pd.DataFrame(data)
+    df.sort_values(by="step", inplace=True, ignore_index=True)
+
+    return df
+
 
 def plot_gap_comparison(data_dicts, figsize=(10, 5), main_title='Recovered Time Percentage Comparison With Paper-Like Prompt'):
     """
