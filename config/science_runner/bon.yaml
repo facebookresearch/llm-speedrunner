@@ -1,0 +1,18 @@
+# @package _global_
+
+science_runner_args:
+  _target_: core.runners.bon_science_runner.BoNScienceRunner
+
+  config: ${exp_config_args}
+  workspace: ${workspace_args}
+  assistant: ${assistant_args}
+  ideator: ${ideator_args}
+  coder: ${coder_args}
+  slurm_config: ${slurm_config_args}
+  
+  max_retries: 3
+  max_n_nodes: 20
+  n_hypotheses: 1
+
+  knowledge_src_paths: ${knowledge_src_paths}
+  knowledge_pass_to_coder: False

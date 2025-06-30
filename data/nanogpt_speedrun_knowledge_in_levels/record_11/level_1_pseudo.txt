@@ -1,0 +1,73 @@
+
+# Pseudo Code Changes
+
+1. Enhanced Attention Mechanism:
+```python
+# Replace standard attention with flexible block attention
+def flex_attention(q, k, v, block_mask):
+    """
+    Utilizes blocked sparse attention pattern with:
+    - Causal masking (only attend to previous tokens)
+    - Document boundary masking (only attend within same document)
+    - Sliding window (1024 token context window)
+    """
+    return optimized_attention(q, k, v, block_mask)
+
+# Generate attention mask with multiple constraints
+def create_block_mask(seq_len):
+    mask = causal_mask & document_mask & window_mask
+    return blocked_sparse_pattern(mask)
+```
+
+2. UNet-style Architecture Modifications:
+```python
+class GPT:
+    def __init__(self):
+        # Split transformer into encoder/decoder with learned skip weights
+        self.encoder_layers = first_half(transformer_blocks)
+        self.decoder_layers = second_half(transformer_blocks)
+        self.skip_weights = learnable_parameters(decoder_layers)
+        
+    def forward(self, x):
+        # Encoder processing with skip connection storage
+        skips = []
+        for layer in encoder_layers:
+            x = process(x)
+            skips.append(x)
+        
+        # Decoder processing with weighted skip connections
+        for i, layer in decoder_layers:
+            x = layer(x + skip_weights[i] * skips.pop())
+```
+
+3. Optimized Positional Embeddings:
+```python
+class Rotary:
+    def __init__(self):
+        # Delay frequency tensor creation to ensure proper device placement
+        self.inv_freq = None
+        
+    def forward(self, x):
+        if first_call or length_changed:
+            # Create frequencies on same device as input
+            self.inv_freq = compute_frequencies(x.device)
+            self.cache_embeddings()
+```
+
+4. Sequence Processing Improvements:
+```python
+# Modified data loader for long sequences
+class DistributedDataLoader:
+    def next_batch(self):
+        # Load ultra-long sequences (64k tokens)
+        batch = load_sequence(64*1024)
+        # Process with sliding window attention
+        return windowed_batch(batch, window=1024)
+```
+
+Key Algorithmic Impacts:
+1. Attention Complexity Reduction: Block sparse attention reduces O(n²) complexity through document/window constraints
+2. Memory Efficiency: Dynamic device placement and caching prevent GPU memory fragmentation
+3. Gradient Flow Enhancement: Learnable skip weights improve gradient propagation in deep network
+4. Long Context Handling: 64k token sequences with windowed attention enable processing of long documents
+5. Training Stability: Compiled attention operators and optimized frequency tensors improve throughput

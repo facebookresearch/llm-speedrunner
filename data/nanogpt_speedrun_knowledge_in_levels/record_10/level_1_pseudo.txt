@@ -1,0 +1,53 @@
+
+# Pseudo Code Changes
+
+// 1. Modified Matrix Inversion Algorithm (Newton-Schulz iteration)
+FUNCTION zeropower_via_newtonschulz5:
+    INPUT: Matrix G, steps
+    INITIALIZE X based on G dimensions
+    FOR each iteration step:
+        COMPUTE A = X * X^T
+        // Key Change: Optimized polynomial coefficients and matrix operations
+        COMPUTE B = b*A + c*A^2  // Reduced computational complexity
+        UPDATE X = a*X + B*X     // Improved convergence properties
+    RETURN processed X
+
+// 2. U-Net Architecture with Learned Skip Connections
+CLASS GPT IMPLEMENTS NEURAL NETWORK:
+    STRUCTURE:
+        - Split transformer layers into encoder/decoder
+        - Add learnable skip connection weights
+        
+    FORWARD PASS:
+        PROCESS input through encoder layers:
+            STORE encoder outputs in skip_connections
+        PROCESS through decoder layers:
+            COMBINE current activation with weighted skip connection:
+                x = x + skip_weights[i] * skip_connections.pop()
+        FINAL normalization and output
+
+// 3. Optimizer Configuration Changes
+SETUP OPTIMIZATION:
+    INCREASE learning rates by 2-4x for:
+        - Token embeddings (0.3 ➔ 0.6)
+        - Output layer (0.002 ➔ 0.008)
+        - Matrix params (0.02 ➔ 0.04)
+    ADD skip_weights to scalar parameters
+    USE separate optimizers for different parameter types
+
+// 4. Training Schedule Adjustment
+SET TRAINING LENGTH:
+    REDUCE total iterations: 3242 ➔ 3000
+    ADJUST warmdown phase: 926 ➔ 900 steps
+
+Key Improvements:
+1. Matrix inversion stability and efficiency through optimized polynomial iteration
+2. U-Net architecture enables better gradient flow and feature reuse via learned skips
+3. Tuned optimizer settings accommodate new architecture components
+4. Streamlined training schedule for faster convergence
+
+Impact:
+- UNet skip connections should improve contextual feature preservation
+- Modified matrix inversion reduces computational complexity while maintaining numerical stability
+- Higher learning rates suggest improved training stability from architecture changes
+- Reduced iteration count implies more efficient training process

@@ -1,0 +1,65 @@
+
+# Pseudo Code Changes
+
+// Key Algorithmic Changes and Improvements:
+
+1. **Residual Value Blending in Attention**
+   - Added learnable lambda parameter for value blending
+   - Forward pass now combines current value with previous block's value:
+   
+   ```python
+   class CausalSelfAttention:
+       def forward(x, prev_v):
+           current_v = compute_value(x)
+           if first_block: prev_v = current_v
+           blended_v = (1 - self.lamb) * current_v + self.lamb * prev_v
+           // Apply attention with blended_v
+           return output, current_v  // Return current_v for next blocks
+   ```
+
+2. **DenseNet-style Block Connections**
+   - Each block mixes current activation with initial embeddings:
+   
+   ```python
+   class Block:
+       def forward(x, prev_v, initial_x):
+           // Mix current activation with initial embeddings
+           x = λ1*x + λ2*initial_x  
+           // Process through attention and MLP
+           return updated_x, new_v
+   ```
+
+3. **Logit Stabilization**
+   - Added tanh-based logit clamping:
+   
+   ```python
+   logits = 30 * tanh(logits / 30)  // Constrain output magnitude
+   ```
+
+4. **Parameter-Type Optimizer Strategy**
+   - Split parameters by dimensionality for specialized optimization:
+   
+   ```python
+   matrix_params = [weights]  // 2D parameters
+   scalar_params = [biases, lambdas]  // 1D parameters
+   use Muon optimizer for matrices, Adam for scalars
+   ```
+
+5. **Momentum Warmup**
+   - Gradual momentum increase for stability:
+   
+   ```python
+   momentum = linear_ramp(0.85 → 0.95) over first 500 steps
+   ```
+
+6. **Training Schedule Compression**
+   - Reduced total iterations from 4578 → 3200
+   - Adjusted warmdown phase proportionally
+
+// Purpose and Impact:
+- Value blending improves gradient flow through attention layers
+- Dense connections help preserve early feature information
+- Logit clamping prevents numerical instability in softmax
+- Specialized optimizers may accelerate convergence
+- Momentum warmup enhances early training stability
+- Compact schedule suggests improved convergence efficiency

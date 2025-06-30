@@ -1,0 +1,73 @@
+
+# Pseudo Code Changes
+
+1. **FP8 Matrix Multiplication Optimization**
+```python
+# New custom FP8 matmul for lm_head projection
+def lm_head_fp8(x, weight):
+    # Uses FP8 precision with dynamic scaling to reduce memory bandwidth
+    # while maintaining gradient stability through custom backward pass
+    return custom_op(x, weight, x_scale, w_scale, grad_scale)
+```
+*Impact*: Reduces GPU memory usage and improves throughput for final projection layer
+
+2. **Batched Newton-Schulz Matrix Approximation**
+```python
+def matrix_inverse_approx(G):
+    # Batched implementation handles multiple matrices simultaneously
+    # Uses modified Newton-Schulz iterations with randomized scaling
+    X = normalize_batched(G)
+    for steps:
+        X = optimized_quintic_polynomial(X)
+    return transpose_if_needed(X)
+```
+*Impact*: Enables parallel processing of weight matrices and improves numerical stability
+
+3. **Merged QKV Attention Projection**
+```python
+class CausalSelfAttention:
+    def __init__():
+        # Single merged weight matrix for Q/K/V projections
+        self.qkv_w = unified_initialization()
+        
+    def forward():
+        q, k, v = split(linear(x, merged_qkv_weights))
+```
+*Impact*: Reduces parameter count and improves memory access patterns
+
+4. **Adaptive Block Attention Masking**
+```python
+def create_attention_masks():
+    # Generates long and short context masks using document structure info
+    long_mask = combine(causal_mask, document_mask, sliding_window)
+    short_mask = create_half_window_mask(long_mask)
+    return [long_mask, short_mask] * layers
+```
+*Impact*: Balances local/global context awareness while maintaining O(n) complexity
+
+5. **Optimized Training Dynamics**
+```python
+def configure_optimizers():
+    # Specialized optimizer settings for different parameter types
+    adam = Adam(embeddings, lr=0.6, eps=1e-10)
+    muon = CustomOptimizer(
+        matrices, 
+        momentum=linear_warmup(0.85→0.95)
+    )
+```
+*Impact*: Stabilizes training through precision-aware optimization strategies
+
+6. **Logit Stabilization**
+```python
+def final_output():
+    # Applies sigmoid-based soft capping instead of raw linear projection
+    logits = 30 * sigmoid(projection(x) / 7.5)
+```
+*Impact*: Prevents logit explosion while maintaining differentiable gradient flow
+
+Key Architectural Improvements:
+- Added batched matrix operations throughout for better hardware utilization
+- Implemented hybrid sliding window/document-aware attention patterns
+- Unified weight initialization schemes across projection layers
+- Added precision-aware training mechanisms (FP8/mixed precision)
+- Optimized memory layout for distributed training scenarios

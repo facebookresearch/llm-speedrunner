@@ -1,0 +1,45 @@
+# @package _global_
+
+template_dirname: collatz
+
+n_iterations: 3
+
+exp_config_args:
+  _target_: core.types.ExperimentConfig
+
+  max_retries: 3
+
+  task_description: >-
+    Find the longest Collatz sequence within a runtime budget of 1 minute.
+
+  code_instructions: >-
+    Make sure you do not change the logging statements,
+    so that the results continue to printed to stdout in the same format.
+    Otherwise, the experiment run may be deemed invalid.
+    Besides the logging statements, you can change anything
+    about the script, including the limit.\n
+
+    Your code will be run on a machine with a single H100 GPU.
+
+  entry_fname: collatz.py
+  fnames: 
+    - 'collatz.py'
+
+  metric_types:
+    runtime: float
+    start_value: int
+    max_steps: float
+
+  selection_metric: max_steps
+  lower_is_better: false
+
+slurm_config_args:
+  _target_: core.types.SlurmConfig
+
+  nodes: 1
+  tasks_per_node: 1
+  gpus_per_node: 1
+  cpus_per_task: 12
+  job_ttl: 5
+  job_name: collatz
+  account: maui

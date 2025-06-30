@@ -1,0 +1,77 @@
+defaults:
+  - _self_
+  - secrets: default
+  - task: collatz
+  - model: r1_32b
+  - science_runner: bon
+  - ideator: base
+  - coder: aider
+  - override hydra/hydra_logging: disabled  
+  - override hydra/job_logging: disabled  
+
+hydra:  
+  output_subdir: null  
+  run:  
+    dir: .
+
+node_id: dummy
+
+log_llm_metrics: True
+
+n_iterations: 5
+
+system_prompt: >-
+  You are a machine learning scientist, with expertise in 
+  large language models and high-performance computing. 
+  Use your expertise to assist the user in their machine learning task.
+
+workspace_args:
+  _target_: core.workspace.Workspace
+  # use /checkpoint/maui/... here to avoid disk quota exceeded errors
+  root_path: /checkpoint/maui/${oc.env:USER}/scientist/workspace/${template_dirname}_${now:%Y%m%d_%H%M%S_%f}
+  template_dir: ${oc.env:PWD}/workspace_templates/${template_dirname}
+  packages:
+    - numpy
+    - numba
+    - pandas
+    - pillow
+    - scipy
+    - scikit-learn
+    - statsmodels
+    - xgboost
+    - lightgbm
+    - bayesian-optimization
+    - torch
+    - torchvision
+    - torch-geometric
+    - timm
+    - huggingface_hub
+    - transformers
+    - cudatoolkit
+
+  ignore_list:
+    - assistant_history.jsonl
+    - ideator_history.jsonl
+    - coder_history.jsonl
+    - aider.txt
+    - meta.json
+    - results.json
+    - cache
+    - preview_resources.txt
+    - "*grading_report.json" 
+    - "submission.csv"
+
+assistant_args:
+  _target_: core.agent.Agent
+  secrets: ${secrets}
+  model_url: ${model_url}
+  model_name: ${model_name}
+  system_prompt: ${system_prompt}
+  log_llm_metrics: ${log_llm_metrics}
+
+abs_read_only_fnames: []
+knowledge_src_paths: []
+
+slurm_config_args:
+  _target_: core.types.SlurmConfig
+  use_local_runs: false

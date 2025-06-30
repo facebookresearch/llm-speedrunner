@@ -1,0 +1,69 @@
+
+# Pseudo Code Changes
+
+1. Muon Optimizer Improvements:
+   - Remove distributed training parameters (rank/world_size)
+   - Use environment variables directly for parallelization check:
+     if i % WORLD_SIZE == RANK: handle parameter distribution
+   - Change gradient scaling logic:
+     Original: scale by sqrt(max_dimension)
+     New: scale by sqrt(max(1, rows/columns)) to handle parameter matrix aspect ratios
+   - Enforce gradient existence with assert instead of conditional
+
+2. GPT Model Architecture Changes:
+   Add RMS normalization after initial embedding:
+     Original: TokenEmbedding -> TransformerBlocks -> FinalNorm
+     New: TokenEmbedding -> RMSNorm -> TransformerBlocks -> FinalNorm
+   Change weight initialization strategy:
+     Disable weight tying between embeddings and classifier head
+     Initialize classifier head weights to zero instead
+
+3. Attention Backend Optimization:
+   Force use cuDNN for attention computation:
+     Disable Flash/math/mem-efficient backends
+     Explicitly enable cudnn_sdp backend
+
+4. Optimizer Configuration Split:
+   Original: 
+     Single AdamW for classifier head
+     Muon for transformer layers at 0.1*base_lr
+   New: 
+     Three separate optimizers:
+     - Adam (high lr=0.3) for input embeddings
+     - Adam (low lr=0.002) for classifier head
+     - Muon (lr=0.02) for transformer layers
+
+5. Training Schedule Adjustments:
+   Reduce total iterations from 5100 → 4578
+   Adjust warmdown phase from 1450 → 1308 iterations
+   Change base learning rate from 3.6e-3 → 0.02 for Muon
+
+Key Algorithmic Impacts:
+- Improved numerical stability through matrix aspect ratio-aware scaling
+- Enhanced parallelism handling via environment variables
+- Potential training acceleration through cudnn attention backend
+- Fine-grained optimization strategy with parameter-type specific optimizers
+- Modified normalization scheme for better gradient flow
+- Adjusted curriculum through revised iteration counts and learning rates
+
+Pseudo Code Structure Overview:
+
+Training Pipeline:
+   1. Initialize model with:
+      - Extra RMSNorm after embeddings
+      - Zero-initialized classifier head
+   2. Configure attention backend:
+      Set cudnn as primary SDP implementation
+   3. Create optimizers:
+      For embeddings → High LR Adam
+      For classifier → Low LR Adam 
+      For transformer → Muon with aspect-ratio scaling
+   4. Training loop:
+      For each batch:
+         Forward pass through modified normalization path
+         Backward pass
+         Update parameters with respective optimizers:
+             Muon applies:
+                 - Momentum/Nesterov acceleration
+                 - Matrix orthogonalization backend
+                 - Aspect-ratio scaled gradient updates

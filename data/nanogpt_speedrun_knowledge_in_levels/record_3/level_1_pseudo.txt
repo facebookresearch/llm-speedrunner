@@ -1,0 +1,86 @@
+
+# Pseudo Code Changes
+
+### Optimizer Changes
+1. **New Muon Optimizer** (replaces OrthogonalNesterov+CombinedOptimizer):
+   ```
+   class Muon(Optimizer):
+       Initialize with:
+           - SGD momentum parameters (lr, momentum, nesterov)
+           - Orthogonalization backend (svd/newton-schulz)
+       
+       step():
+           For each parameter:
+               Apply momentum buffer update
+               If using nesterov: adjust gradient with momentum
+               Orthogonalize gradient using selected backend
+               Handle special QKV parameter grouping:
+                   Split gradient matrix into chunks
+                   Orthogonalize each chunk separately
+               Scale update based on matrix dimensions
+               Apply scaled orthogonalized update
+   ```
+
+2. **Orthogonalization Backends**:
+   ```
+   zeropower_via_svd(G):
+       return U * V^T from SVD decomposition
+   
+   zeropower_via_newtonschulz5(G):
+       Iterative quintic approximation for orthogonalization
+       (5 → 10 default steps, optimized coefficients)
+       Special handling for rectangular matrices
+   ```
+
+### Training Pipeline Changes
+3. **Optimizer Configuration**:
+   ```
+   Previously:
+       Combined AdamW + OrthogonalNesterov
+   
+   Now:
+       AdamW for final layer (lm_head)
+       Muon for transformer blocks
+       Separate learning rates (Muon lr = 0.1 * AdamW lr)
+   ```
+
+4. **Gradient Handling**:
+   ```
+   Add gradient accumulation:
+       For N accumulation steps:
+           Forward pass
+           Backward pass (delay sync for intermediate steps)
+       Average gradients across accumulations
+   
+   Use DDP no_sync context:
+       Skip gradient synchronization during accumulation
+       Final sync only on last accumulation step
+   ```
+
+### Validation & Logging
+5. **Timing & Metrics**:
+   ```
+   Track precise training time:
+       Skip first 10 steps (warmup)
+       Measure per-step latency
+       Separate validation timing from training
+   
+   Enhanced logging:
+       Include hardware info (nvidia-smi)
+       Track peak memory usage
+       Save full code snapshot in logs
+   ```
+
+### Key Improvements
+- **Numerical Stability**: New orthogonalization backends with better bfloat16 compatibility
+- **Convergence**: Special handling for QKV parameters improves transformer layer updates
+- **Performance**: Gradient accumulation + delayed DDP sync reduces communication overhead
+- **Reproducibility**: Deterministic validation steps based on fixed token count
+- **Debuggability**: Complete environment snapshots in logs including code version
+
+### Impact Summary
+The changes implement a novel optimization strategy that combines momentum SGD with numerical orthogonalization, particularly effective for transformer architectures. The modified training pipeline shows: 
+1. Better parameter update geometry through matrix orthogonalization
+2. More efficient distributed training via optimized gradient sync
+3. Improved diagnostic capabilities through enhanced metrics
+4. Increased stability via specialized parameter group handling

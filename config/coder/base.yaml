@@ -1,0 +1,9 @@
+# @package _global_
+
+coder_args:
+  _target_: core.coders.base.Coder
+  secrets: ${secrets}
+  model_url: ${model_url}
+  model_name: ${model_name}
+  system_prompt: ${system_prompt}
+  log_llm_metrics: ${log_llm_metrics}

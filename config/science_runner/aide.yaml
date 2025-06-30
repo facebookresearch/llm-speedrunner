@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - bon
+
+science_runner_args:
+  n_initial_hypotheses: 5
+  n_hypotheses: 1
+  debug_prob: 0.5
+  max_bug_depth: 3
+  max_n_nodes: 20

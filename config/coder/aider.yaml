@@ -1,0 +1,14 @@
+# @package _global_
+
+coder_args:
+  _target_: core.coders.aider.AiderCoder
+  secrets: ${secrets}
+  model_url: ${model_url}
+  model_name: ${model_name}
+  system_prompt: ${system_prompt}
+  log_llm_metrics: ${log_llm_metrics}
+  stream: True
+  edit_format: "diff"
+  max_reflections: 5
+  use_temperature: 0.6  # Ignored for o1 models
+  abs_read_only_fnames: ${abs_read_only_fnames}

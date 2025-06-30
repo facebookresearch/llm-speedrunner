@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: "deepseek-r1"
+model_url: "http://submit-0.fair-aws-h200-1.hpcaas:19743/v1/"

@@ -1,0 +1,64 @@
+
+Here's a detailed breakdown of the improvements:
+
+1. **Architectural Improvements**
+- **Rotary Positional Embeddings**: Replaced standard positional embeddings with rotary embeddings
+  - Added `Rotary` module and `apply_rotary_emb` function for relative position encoding
+  - Benefits: Better captures relative positions and attention patterns, improves model accuracy
+  - Implementation: Applied to queries/keys in attention instead of separate positional embeddings
+
+- **Simplified Normalization**
+  - Removed all affine parameters from RMSNorm implementation
+  - Benefits: Reduces parameter count while maintaining effectiveness
+  - Tradeoff: Minor performance cost offset by other optimizations
+
+2. **Optimization Improvements**
+- **Learning Rate Changes**:
+  - Increased base LR from 0.0015 to 0.0018 (3x increase as per changelog)
+  - Changed schedule to trapezoidal (warmup → constant → warmdown)
+  - Benefits: Following [2405.18392], allows more stable high-LR training
+
+- **Gradient Normalization**:
+  - Replaced gradient clipping with per-parameter gradient norm scaling
+  - `p.grad = p.grad / (p.grad.norm() + 1e-6)`
+  - Benefits: More stable training with high LR, prevents explosion
+
+3. **Initialization/Scaling Changes**
+- **Attention Scaling**:
+  - Introduced `attn_scale = 1/sqrt(2*n_layer)`
+  - Replaced ad-hoc `/ math.sqrt(24)` with systematic layer-based scaling
+  - Benefits: Better coordinates residual branches across layers
+
+- **Removed Positional Embeddings**:
+  - Deleted `wpe` embedding layer completely
+  - Benefits: Parameter reduction + rotary handles position information
+
+4. **Training Process Improvements**
+- **Checkpointing**:
+  - Added periodic model saving (`save_every` parameter)
+  - Benefits: Fault tolerance and easier resumption
+
+- **Batch Size Optimization**:
+  - Increased batch size from 32 to 64 tokens
+  - Total batch size from 262K to 524K tokens
+  - Benefits: Better hardware utilization
+
+5. **Code Simplifications**
+- Removed `_init_weights` and special initialization flags
+- Eliminated position embedding mixing (`tok_emb + pos_emb`)
+- Removed unused configuration options and legacy code paths
+
+**Technical Challenges Addressed**:
+1. **Stability at High Learning Rates**: Through gradient normalization and careful attention scaling
+2. **Position Encoding Migration**: Non-trivial transition from absolute to relative (rotary) positioning
+3. **Distributed Training Coordination**: Maintained DDP compatibility through architectural changes
+4. **Learning Rate Schedule Tuning**: Required careful warmup/warmdown balancing for trapezoidal schedule
+
+**Performance Impact**:
+Combined these changes enable 2x faster training convergence by:
+- Allowing more aggressive learning rates through better normalization
+- Improving parameter efficiency with rotary embeddings
+- Increasing useful batch size through stability improvements
+- Reducing computational overhead from simplified operations
+
+The architectural simplifications also make the model more amenable to compiler optimizations (like torch.compile), while the training process improvements enable better utilization of distributed hardware.

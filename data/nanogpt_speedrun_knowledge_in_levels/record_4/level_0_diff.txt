@@ -1,0 +1,198 @@
+diff --git a/temp_current.py b/temp_next.py
+index 2ed939f..5f5fccc 100644
+--- a/temp_current.py
++++ b/temp_next.py
+@@ -35,7 +35,8 @@ def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
+     """
+     assert len(G.shape) == 2
+     a, b, c = (3.4445, -4.7750,  2.0315)
+-    X = G.bfloat16() / (G.norm() + eps) # ensure top singular value <= 1
++    X = G.bfloat16()
++    X /= (X.norm() + eps) # ensure top singular value <= 1
+     if G.size(0) > G.size(1):
+         X = X.T
+     for _ in range(steps):
+@@ -44,13 +45,13 @@ def zeropower_via_newtonschulz5(G, steps=10, eps=1e-7):
+         X = a * X + b * B + c * A @ B
+     if G.size(0) > G.size(1):
+         X = X.T
+-    return X.to(G.dtype)
++    return X
+ 
+ zeropower_backends = dict(svd=zeropower_via_svd, newtonschulz5=zeropower_via_newtonschulz5)
+ 
+ class Muon(torch.optim.Optimizer):
+     """
+-    Muon: MomentUm Orthogonalized by Newton-schulz
++    Muon - MomentUm Orthogonalized by Newton-schulz
+ 
+     Muon internally runs standard SGD-momentum, and then performs an orthogonalization post-
+     processing step, in which each 2D parameter's update is replaced with the nearest orthogonal
+@@ -108,8 +109,7 @@ class Rotary(torch.nn.Module):
+ 
+     def __init__(self, dim, base=10000):
+         super().__init__()
+-        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+-        self.register_buffer("inv_freq", inv_freq)
++        self.inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+         self.seq_len_cached = None
+         self.cos_cached = None
+         self.sin_cached = None
+@@ -120,8 +120,8 @@ class Rotary(torch.nn.Module):
+             self.seq_len_cached = seq_len
+             t = torch.arange(seq_len, device=x.device).type_as(self.inv_freq)
+             freqs = torch.outer(t, self.inv_freq).to(x.device)
+-            self.cos_cached = freqs.cos()
+-            self.sin_cached = freqs.sin()
++            self.cos_cached = freqs.cos().bfloat16()
++            self.sin_cached = freqs.sin().bfloat16()
+         return self.cos_cached[None, :, None, :], self.sin_cached[None, :, None, :]
+ 
+ def apply_rotary_emb(x, cos, sin):
+@@ -131,12 +131,7 @@ def apply_rotary_emb(x, cos, sin):
+     x2 = x[..., d:]
+     y1 = x1 * cos + x2 * sin
+     y2 = x1 * (-sin) + x2 * cos
+-    return torch.cat([y1, y2], 3)
+-
+-def rmsnorm(x0, eps=1e-6):
+-    x = x0.float()
+-    x = x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + eps)
+-    return x.type_as(x0)
++    return torch.cat([y1, y2], 3).type_as(x)
+ 
+ class CausalSelfAttention(nn.Module):
+ 
+@@ -146,26 +141,24 @@ class CausalSelfAttention(nn.Module):
+         self.n_embd = config.n_embd
+         self.head_dim = self.n_embd // self.n_head
+         assert self.n_embd % self.n_head == 0
+-        # key, query, value projections for all heads, but in a batch
+-        self.c_attn = nn.Linear(self.n_embd, 3 * self.n_embd, bias=False)
++        self.c_q = nn.Linear(self.n_embd, self.n_embd, bias=False)
++        self.c_k = nn.Linear(self.n_embd, self.n_embd, bias=False)
++        self.c_v = nn.Linear(self.n_embd, self.n_embd, bias=False)
+         # output projection
+         self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=False)
++        self.c_proj.weight.data.zero_() # zero init suggested by @Grad62304977
+         self.rotary = Rotary(self.head_dim)
+ 
+     def forward(self, x):
+         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
+-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
+-        qkv = self.c_attn(x)
+-        q, k, v = qkv.split(self.n_embd, dim=2)
+-        k = k.view(B, T, self.n_head, self.head_dim)
+-        q = q.view(B, T, self.n_head, self.head_dim)
+-        v = v.view(B, T, self.n_head, self.head_dim)
++        q = self.c_q(x).view(B, T, self.n_head, self.head_dim)
++        k = self.c_k(x).view(B, T, self.n_head, self.head_dim)
++        v = self.c_v(x).view(B, T, self.n_head, self.head_dim)
+         cos, sin = self.rotary(q)
+-        q = apply_rotary_emb(q, cos, sin)
+-        k = apply_rotary_emb(k, cos, sin)
++        q, k = apply_rotary_emb(q, cos, sin), apply_rotary_emb(k, cos, sin)
++        q, k = F.rms_norm(q, (q.size(-1),)), F.rms_norm(k, (k.size(-1),)) # QK norm suggested by @Grad62304977
+         y = F.scaled_dot_product_attention(q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2), is_causal=True)
+-        y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
+-        # output projection
++        y = y.transpose(1, 2).contiguous().view_as(x) # re-assemble all head outputs side by side
+         y = self.c_proj(y)
+         return y
+ 
+@@ -175,10 +168,11 @@ class MLP(nn.Module):
+         super().__init__()
+         self.c_fc    = nn.Linear(config.n_embd, 4 * config.n_embd, bias=False)
+         self.c_proj  = nn.Linear(4 * config.n_embd, config.n_embd, bias=False)
++        self.c_proj.weight.data.zero_() # zero init suggested by @Grad62304977
+ 
+     def forward(self, x):
+         x = self.c_fc(x)
+-        x = F.gelu(x)
++        x = F.relu(x).square() # https://arxiv.org/abs/2109.08668v2; ~1-2% better than GELU; suggested by @SKYLINEZ007 and @Grad62304977
+         x = self.c_proj(x)
+         return x
+ 
+@@ -188,11 +182,10 @@ class Block(nn.Module):
+         super().__init__()
+         self.attn = CausalSelfAttention(config)
+         self.mlp = MLP(config)
+-        self.attn_scale = (1 / (2 * config.n_layer)**0.5)
+ 
+     def forward(self, x):
+-        x = x + self.attn_scale * self.attn(rmsnorm(x))
+-        x = x + self.mlp(rmsnorm(x))
++        x = x + self.attn(F.rms_norm(x, (x.size(-1),)))
++        x = x + self.mlp(F.rms_norm(x, (x.size(-1),)))
+         return x
+ 
+ # -----------------------------------------------------------------------------
+@@ -200,9 +193,9 @@ class Block(nn.Module):
+ 
+ @dataclass
+ class GPTConfig:
+-    vocab_size : int = 50257
++    vocab_size : int = 50304
+     n_layer : int = 12
+-    n_head : int = 12
++    n_head : int = 6 # head dim 128 suggested by @Grad62304977
+     n_embd : int = 768
+ 
+ class GPT(nn.Module):
+@@ -219,15 +212,12 @@ class GPT(nn.Module):
+         self.transformer.wte.weight = self.lm_head.weight # https://paperswithcode.com/method/weight-tying
+ 
+     def forward(self, idx, targets=None, return_logits=True):
+-        b, t = idx.size()
+-        pos = torch.arange(0, t, dtype=torch.long, device=idx.device) # shape (t)
+ 
+         # forward the GPT model itself
+         x = self.transformer.wte(idx) # token embeddings of shape (b, t, n_embd)
+-
+         for block in self.transformer.h:
+             x = block(x)
+-        x = rmsnorm(x)
++        x = F.rms_norm(x, (x.size(-1),))
+ 
+         if targets is not None:
+             # if we are given some desired targets also calculate the loss
+@@ -334,10 +324,10 @@ class Hyperparameters:
+     batch_size : int = 8*64 # batch size, in sequences, across all devices
+     device_batch_size : int = 64 # batch size, in sequences, per device
+     sequence_length : int = 1024 # sequence length, in tokens
+-    num_iterations : int = 6200 # number of iterations to run
++    num_iterations : int = 5100 # number of iterations to run
+     learning_rate : float = 0.0036
+     warmup_iters : int = 0
+-    warmdown_iters : int = 1800 # number of iterations of linear warmup/warmdown for triangular or trapezoidal schedule
++    warmdown_iters : int = 1450 # number of iterations of linear warmup/warmdown for triangular or trapezoidal schedule
+     weight_decay : float = 0
+     # evaluation and logging hyperparams
+     val_loss_every : int = 125 # every how many steps to evaluate val loss? 0 for only at the end
+@@ -372,9 +362,10 @@ if master_process:
+     print(f"Validation DataLoader: total number of tokens: {val_loader.ntok_total} across {len(val_loader.files)} files")
+ x, y = train_loader.next_batch()
+ 
+-# init the model from scratch
+-num_vocab = 50257
+-model = GPT(GPTConfig(vocab_size=num_vocab, n_layer=12, n_head=12, n_embd=768))
++# there are only 50257 unique GPT-2 tokens; we extend to nearest multiple of 128 for efficiency. suggested to me by @Grad62304977.
++# this originates from Karpathy's experiments.
++num_vocab = 50304
++model = GPT(GPTConfig(vocab_size=num_vocab, n_layer=12, n_head=6, n_embd=768))
+ model = model.cuda()
+ if hasattr(config, "coordinate_descent_tuning"):
+     config.coordinate_descent_tuning = True # suggested by @Chillee
+@@ -451,9 +442,10 @@ for step in range(args.num_iterations + 1):
+         val_loss = 0.0
+         for _ in range(val_steps):
+             x_val, y_val = val_loader.next_batch()
+-            with torch.no_grad(): # of course, we'd like to use ctx here too, but that creates a torch.compile error for some reason
++            with ctx: # of course, we'd like to use no_grad() here too, but that creates a torch.compile error for some reason
+                 _, loss = model(x_val, y_val, return_logits=False)
+-                val_loss += loss
++                val_loss += loss.detach()
++                del loss
+         dist.all_reduce(val_loss, op=dist.ReduceOp.AVG)
+         val_loss /= val_steps
+         # log val loss to console and to logfile

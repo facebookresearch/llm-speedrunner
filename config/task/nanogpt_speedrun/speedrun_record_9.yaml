@@ -1,0 +1,9 @@
+# @package _global_
+
+defaults:
+- nanogpt_speedrun/default_config
+
+template_dirname: nanogpt_speedrun/record_9
+
+slurm_config_args:
+  job_name: nanogpt_speedrun_record_9

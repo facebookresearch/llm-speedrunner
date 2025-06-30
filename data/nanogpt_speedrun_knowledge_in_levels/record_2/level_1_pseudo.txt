@@ -1,0 +1,82 @@
+
+# Pseudo Code Changes
+
+// Key Algorithmic Improvements Overview
+
+1. New Optimizer Architecture:
+- Added OrthogonalNesterov optimizer:
+  • Combines Nesterov momentum with Newton-Schulz orthogonalization
+  • Uses quintic iteration for matrix orthogonalization (5 steps default)
+  • Purpose: Improved optimization stability for transformer layers
+  • Impact: Enables higher learning rates for hidden layers
+
+- Created CombinedOptimizer:
+  • Manages multiple optimizers for different parameter groups
+  • Allows separate AdamW for head vs OrthogonalNesterov for transformer
+  • Enables 10x higher LR for hidden layers vs output layer
+
+2. Model Structure Changes:
+- Modified Attention Scaling:
+  Original: 1 / sqrt(2 * n_layer)
+  New: 1 / (2 * n_layer)^0.5 (equivalent but more numerically stable)
+  
+- Added Precision Control:
+  • Force FP32 for final logits calculations
+  • Enables mixed precision while maintaining classification accuracy
+
+3. Training Loop Improvements:
+- Gradient Handling:
+  Added gradient accumulation support (new accumulation parameter)
+  Implemented gradient scaling instead of clipping
+  
+- Distributed Training:
+  Unified validation loss averaging across processes
+  Added proper FP32 fallback for validation steps
+  
+- Learning Rate Scheduling:
+  Implemented proportional scaling for hybrid optimizer
+  Separated warmup/warmdown phases for better convergence
+
+4. Memory/Performance Optimizations:
+- Removed block_size constraint in forward pass
+- Added coordinated descent tuning for inductor
+- Improved checkpointing with master process handling
+
+// High-Level Training Flow Changes
+
+Before Optimization Step:
+1. Split parameters into two groups:
+   - Head: Use AdamW with original learning rate
+   - Transformer: Use OrthogonalNesterov with 10x LR
+
+During Training Step:
+for each accumulation step:
+    with mixed precision:
+        forward pass
+        backward pass
+    average gradients across accumulation steps
+
+orthogonal_nesterov_update(params):
+    compute momentum buffer
+    apply Newton-Schulz orthogonalization:
+        X = G / ||G||
+        for 5 iterations:
+            X = a*X + b*(X@X.T@X) + c*(X@X.T)@(X@X.T@X)
+    update weights with orthogonalized gradients
+
+hybrid_optimizer_step():
+    scale learning rates proportionally for both optimizers
+    execute AdamW step for head
+    execute OrthogonalNesterov step for transformer
+
+Validation Phase:
+    aggregate losses across all GPUs
+    average over fixed number of batches
+    maintain FP32 precision for stable metrics
+
+// Key Impact Summary
+- Enables more stable training with higher learning rates
+- Improves parameter update directions via orthogonalization
+- Allows better optimization separation between head/transformer
+- Maintains precision where critical while using mixed precision
+- Reduces distributed training variance through proper averaging

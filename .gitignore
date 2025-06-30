@@ -1,0 +1,48 @@
+# macOS system files
+.DS_Store
+
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# pytest
+.pytest_cache
+
+# Virtual environments
+venv/
+.env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Hydra
+outputs/
+
+# Ignore all files in the config/secrets directory
+config/secrets/*
+
+# Unignore the default.template.yaml file
+!config/secrets/default.template.yaml
+
+# Workspaces
+workspaces/
+cache/
+
+# Figures
+figures/
+
+# Local results
+results/
+
+# Aider
+aider.txt
+
+# submitit
+submitit_logs/
+
+# nanogpt run artifacts
+logs/
+*.pt
+

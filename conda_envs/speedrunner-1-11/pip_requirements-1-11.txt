@@ -1,0 +1,83 @@
+# Core ML/AI frameworks
+torch==2.7.1
+torchvision==0.20.1
+tensorflow==2.18.0
+transformers==4.50.0
+huggingface-hub==0.28.0
+tokenizers
+datasets
+sympy
+triton==3.1.0
+
+# LLM and inference
+vllm==0.9.0
+outlines==0.1.11
+litellm==1.61.15
+openai==1.60.2
+anthropic
+tiktoken
+
+# Data science and ML utilities
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.6.1
+matplotlib==3.10.0
+scipy==1.13.1
+
+# Development and training acceleration
+accelerate==1.6.0
+deepspeed==0.16.3
+ray==2.43.0
+
+# Jupyter and development environment
+jupyterlab==4.3.6
+ipython==8.32.0
+
+# Web framework and API
+Flask
+fastapi==0.115.7
+uvicorn==0.34.0
+gunicorn
+
+# Configuration and utilities
+pydantic==2.10.6
+pyyaml==6.0.2
+tqdm==4.67.1
+requests==2.32.4
+regex
+submitit
+hydra-core
+tenacity
+annotated-types
+pydantic-core
+httpx
+distro
+jiter
+dotenv
+json5
+networkx
+
+# Aider dependencies
+Pillow
+mixpanel
+posthog
+pyperclip
+pydub
+rich
+importlib-resources
+pathspec
+pypandoc
+git+https://github.com/Aider-AI/grep-ast.git
+tree-sitter-languages
+tree-sitter-language-pack
+diskcache
+diff-match-patch
+flake8
+black
+
+# AI development tools
+aider-chat==0.74.1
+
+# Data formats and storage
+boto3==1.37.29
+botocore

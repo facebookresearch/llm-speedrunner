@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+- base
+
+ideator_args:
+  _target_: core.ideators.dummy_ideator.DummyIdeator
+

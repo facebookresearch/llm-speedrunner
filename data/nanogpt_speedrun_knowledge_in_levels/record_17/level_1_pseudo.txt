@@ -1,0 +1,88 @@
+
+# Pseudo Code Changes
+
+### 1. Optimizer Improvements (Muon)
+```
+Newton-Schulz Orthogonalization:
+    Procedure zeropower_via_newtonschulz5:
+        Added explicit spectral norm clamping (1e-7 epsilon)
+        Removed redundant eps parameter
+        Improved tensor dimension handling for rectangular matrices
+        
+Muon Optimizer Step:
+    Changed all_gather to async operation
+    Added per-layer gradient scaling based on parameter dimensions
+    Introduced momentum warmup schedule (0.85→0.95 over 300 steps)
+    Simplified parameter group initialization
+```
+
+### 2. Architecture Changes
+```
+Attention Block:
+    Skip attention computation in layer 7
+    Modified value embedding injection logic:
+        if ve exists: blend with standard value
+        else: use standard value only
+    Added RMSNorm before QK products
+        
+Value Embeddings:
+    Implemented "012...012" pattern reuse
+    Added explicit bfloat16 casting
+    Simplified U-Net structure with encoder/decoder split
+        
+Layer Modifications:
+    Added learnable skip connection weights for decoder
+    Changed tanh logit scaling factor from 30→15
+    Removed redundant GPTConfig dataclass
+```
+
+### 3. Training Process
+```
+Sliding Window Schedule:
+    Linear increase from 128→1792 blocks during training
+    Implemented via block-wise masking
+    
+Learning Rate:
+    Triangular schedule with:
+        - Constant phase (first 60% steps)
+        - Linear cooldown (last 40%)
+        
+Distributed Loading:
+    Added sharded data loading with:
+        - Memory-mapped token storage
+        - Batch size aware shard advancement
+        - Non-blocking device transfers
+```
+
+### 4. Memory Optimization
+```
+Embedding Handling:
+    Optional bfloat16 casting for embeddings
+    Unified parameter typing for CastedLinear
+    
+CUDA Memory:
+    Added empty CUDA tensor initialization
+    Set PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+    Gradient-as-bucket-view for DDP
+```
+
+### 5. Kernel Improvements
+```
+FlexAttention Usage:
+    Enforced batch_size=1 requirement
+    Integrated BlockMask with document-aware masking:
+        Combined causal + sliding window + document boundaries
+    Added block-wise reordering optimization
+        
+Kernel Configuration:
+    Enabled coordinate_descent_tuning
+    Removed max_autotune flag
+    Added compile-time assertions for tensor dimensions
+```
+
+Each change focuses on either:
+- Improving numerical stability (spectral norm clamp, RMSNorm)
+- Increasing distributed efficiency (async ops, sharded loading)
+- Enhancing model capacity (value embedding patterns, skip connections)
+- Reducing memory pressure (bfloat16 embeddings, alloc config)
+- Simplifying maintenance (config removal, parameter reorganization)

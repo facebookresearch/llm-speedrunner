@@ -1,0 +1,4 @@
+# @package _global_
+
+model_name: gemini-2.5-pro
+model_url: "dummy_url"

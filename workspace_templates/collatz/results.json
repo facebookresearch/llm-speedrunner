@@ -1,0 +1,10 @@
+{	
+	"job_status": "COMPLETED",
+	"metrics": {
+		"runtime": 5.32,
+		"start_value": 837799,
+		"max_steps": 524
+	},
+	"hypothesis": "This is my initial implementation for finding a Collatz sequence of maximum length in under 60 seconds.",
+	"outcome_summary": "This script runs in 5.32 seconds and finds a Collatz sequence starting from 837799 with length 524."
+}

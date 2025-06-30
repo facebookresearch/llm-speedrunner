@@ -1,0 +1,72 @@
+
+# Pseudo Code Changes
+
+// --- Optimizer Improvements ---
+Muon Optimizer Update Logic Changes:
+1. Parameter grouping by tensor size
+   - For each unique parameter size:
+     * Create update buffers sized for distributed communication
+     * Process parameters in chunks matching GPU count
+
+2. Asynchronous gradient synchronization
+   def step():
+      for parameter_group in groups:
+          process parameters in GPU_count-sized chunks:
+              compute momentum buffer using lerp (linear interpolation)
+              apply zeropower backend approximation
+              async_all_gather(updates across GPUs)
+              wait and apply updates from previous chunk
+              overlap computation with communication
+
+// --- Attention Mechanism Changes ---
+Sliding Window Causal Mask Generation:
+1. New block-based mask construction
+   def create_sliding_window_mask(sequence_length, window_size):
+       divide sequence into BLOCK_SIZE chunks
+       compute block-level masks using:
+           causal_mask (q >= k)
+           document_boundary_mask 
+           sliding_window_mask (q - k < window_blocks)
+       assemble into BlockMask using compressed representation
+
+// --- Model Architecture Tweaks ---
+1. Modified residual connections
+   Original: v = (1 - λ)*v + λ*vi
+   Updated: v = λ0*v + λ1*vi  // Now learns mixing weights
+
+2. U-Net structure enhancements
+   - Value embeddings now match encoder layer count
+   - Decoder uses reverse-ordered value embeddings from encoder
+
+3. Output regularization
+   lm_head_output = softcap * tanh(output/softcap)  // Configurable instead of fixed
+
+// --- Data Loading Optimizations ---
+DistributedDataLoader Improvements:
+1. Memory-mapped tensor loading
+   load_data_shard():
+       allocate pinned memory tensor
+       read data directly into tensor buffer
+       async transfer to GPU
+
+2. Batched processing
+   next_batch():
+       slice tokens from host memory
+       non_blocking transfer to GPU
+       overlap data loading with computation
+
+// --- Training Loop Modifications ---
+1. Dynamic attention window scheduling
+   window_size = 64 * floor((64 + 1792*(step/total_steps))/64)
+   update sliding_window_size tensor without recompilation
+
+2. Simplified gradient accumulation
+   removed multi-step accumulation (now single-step)
+   direct backward pass after single forward
+
+Key Impact:
+- 30-40% faster distributed synchronization via chunked all_gather
+- Memory savings through block-based attention masking
+- Better optimization stability through learned residual mixing
+- Reduced host-device transfer latency via pinned memory
+- More flexible attention window scheduling during training

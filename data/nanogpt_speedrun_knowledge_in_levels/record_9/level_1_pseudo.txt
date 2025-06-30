@@ -1,0 +1,70 @@
+
+# Pseudo Code Changes
+
+### 1. Mixed Precision Casting Layer
+Added CastedLinear wrapper that automatically casts weights to input dtype:
+```
+CLASS CastedLinear INHERITS Linear:
+    METHOD forward(x):
+        RETURN linear(x, weight.cast_to(x.dtype))  # Ensures weight/input dtype alignment
+```
+- Impact: Enables safer mixed precision training by maintaining numerical stability
+- Used in all attention/MLP projections and output head
+
+### 2. Simplified Forward Pass
+Changed GPT forward signature and logic:
+```
+METHOD forward(idx, target):
+    x = compute_embeddings(idx)
+    x = process_through_transformer_blocks(x)
+    logits = lm_head(x)
+    logits = apply_tanh_activation(logits)  # 30*tanh(logits/30)
+    loss = cross_entropy(logits, target)
+    RETURN loss
+```
+- Key changes:
+  - Removed conditional branching for inference vs training
+  - Always compute full sequence logits
+  - Simplified return to only loss
+
+### 3. Precision Management Strategy
+Modified model initialization:
+```
+MODEL = GPT().cast_to(bfloat16)
+FOR each module IN model:
+    IF module IS CastedLinear:
+        KEEP IN float32  # Maintain precision for critical layers
+```
+- Impact: Enables mixed precision while preserving numerical stability
+
+### 4. Training Loop Optimization
+Streamlined validation and training steps:
+```
+PROCEDURE validate():
+    FOR validation batches:
+        WITH no_grad:
+            loss += model(x_val, y_val)  # Simplified single-pass loss
+
+PROCEDURE train():
+    FOR training batches:
+        loss = model(x, y)  # No explicit autocast context
+        backprop(loss)
+```
+- Removed manual autocast context management
+- Unified precision handling through CastedLinear
+
+### 5. Hyperparameter Adjustments
+```
+NUM_ITERATIONS: 3200 → 3242
+WARMDOWN_ITERS: 914 → 926
+```
+- Impact: Extended training schedule for convergence
+
+### Key Improvements:
+1. Safer mixed precision through type-aware linear layers
+2. Reduced conditional logic for clearer execution paths
+3. Manual precision control replacing autocast for better determinism
+4. Unified loss computation pattern across train/val
+5. Optimized attention backend selection (CUDNN SDP enabled)
+
+These changes aim to improve numerical stability, reduce computational overhead, and simplify the training loop while maintaining model performance.

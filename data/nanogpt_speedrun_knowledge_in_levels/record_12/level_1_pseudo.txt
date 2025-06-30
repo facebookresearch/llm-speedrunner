@@ -1,0 +1,59 @@
+
+# Pseudo Code Changes
+
+// --- Attention Mechanism Improvements ---
+// Dynamic attention window scaling replaces fixed 1024 token window
+FUNCTION document_causal_mask(blocksize):
+    RETURN mask WHERE:
+        (query_position >= key_position) AND                // Standard causal masking
+        (same_document) AND                                 // Document boundary constraints
+        (query_position - key_position < dynamic_blocksize) // Increasing context window
+
+DURING TRAINING:
+    // Linearly scale attention block size from 64 to 1792 tokens over training
+    current_step ← training_progress (0..1)
+    attn_blocksize ← 64 + (1792 - 64) * current_step
+    attn_blocksize ← ROUND_DOWN_TO_NEAREST_64(attn_blocksize)
+
+// --- Optimizer Configuration Updates ---
+ADJUST OPTIMIZER PARAMETERS:
+    // Changed beta1 from 0.9→0.8 in Adam optimizers for faster momentum
+    Adam(word_embeddings): lr=0.6, betas=(0.8, 0.95)
+    Adam(output_layer):     lr=0.008, betas=(0.8, 0.95)
+    
+    // Increased Muon optimizer LR from 0.04→0.05 for matrix params
+    Muon(matrix_params): lr=0.05, momentum=RAMP_UP(schedule)
+
+// --- Training Schedule Modifications ---
+REDUCE TOTAL ITERATIONS FROM 1875 → 1750
+EXTEND COOLDOWN PHASE FROM 562 → 640 ITERATIONS
+
+FUNCTION get_learning_rate(step):
+    IF step < warmup_period:
+        RETURN LINEAR_RAMP_UP(step)
+    ELIF step < (total_steps - cooldown_steps):
+        RETURN max_rate
+    ELSE:
+        // Extended cooldown phase for smoother LR decay
+        RETURN LINEAR_DECAY(remaining_cooldown_steps)
+
+// --- Training Loop Improvements ---
+WHILE training_step < total_steps:
+    // Earlier momentum stabilization (300 vs 500 steps)
+    muon_momentum ← LERP(0.85→0.95 OVER 300 STEPS)
+    
+    // More frequent validation checks
+    IF should_validate(step):
+        EVALUATE val_loss WITH dynamic_attn_blocksize
+        
+    // Unified gradient handling for accumulation
+    APPLY_GRADIENTS:
+        AVERAGE_GRADIENTS_OVER_ACCUMULATION_STEPS
+        CLIP_GRADIENTS(1.0)
+
+Key Algorithmic Impact:
+1. Dynamic attention window grows with training progress → balances early stability with final context coverage
+2. Optimizer tuning → faster convergence through adjusted momentum and learning rates
+3. Extended cooldown phase → enables smoother model convergence
+4. Earlier validation checks → better training process monitoring
+5. Accelerated momentum warmup → faster parameter stabilization for matrix weights

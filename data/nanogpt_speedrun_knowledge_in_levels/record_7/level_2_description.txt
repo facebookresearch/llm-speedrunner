@@ -1,0 +1,49 @@
+
+Here's a detailed analysis of the key improvements and their impact:
+
+1. **Architectural Improvements**
+- **Untied Embedding/Head Weights**: Separated the input embedding (wte) and output projection (lm_head) matrices rather than weight-tying them
+- **Added RMSNorm After Embeddings**: Implemented RMS normalization immediately after the embedding layer
+- **Zero-Initialized LM Head**: Initialized the output projection weights to zeros instead of sharing embeddings
+
+*Why Beneficial*:
+- Untying weights allows independent learning of input vs output representations
+- RMSNorm stabilizes gradient flow through the embedding layer
+- Zero initialization prevents early overfitting and creates smoother optimization landscape
+
+2. **Optimizer Configuration**
+- **Specialized Optimizer Setup**: Split parameters into 3 groups:
+  - Embeddings: High LR (0.3) Adam
+  - LM Head: Low LR (0.002) Adam  
+  - Transformer: Muon optimizer (0.02 LR)
+- **Modified Muon Scaling**: Changed weight update scaling from `max(dim)**0.5` to `sqrt(max(1, w/h))`
+- **Simplified Muon Initialization**: Removed explicit rank/world_size parameters in favor of env vars
+
+*Why Beneficial*:
+- Allows fine-grained control over learning dynamics for different parameter types
+- Improved scaling handles non-square matrices more effectively
+- Reduces configuration complexity while maintaining DDP compatibility
+
+3. **Performance Optimizations**
+- **CUDNN Attention Enforcement**: Explicitly enabled cuDNN-based SDP attention
+- **Adjusted Training Schedule**: Reduced total iterations from 5100 → 4578 (-10%)
+- **Modified Learning Schedule**: Adjusted warmdown from 1450 → 1308 steps
+
+*Why Beneficial*:
+- cuDNN attention provides 4ms/step speed improvement
+- More efficient training trajectory reduces total compute
+- Better aligned LR decay with shorter training run
+
+4. **Technical Challenges Addressed**
+- **Gradient Coordination**: Managed different optimizer requirements across parameter groups
+- **Numerical Stability**: Balanced high LR embeddings with conservative head updates
+- **Distributed Convergence**: Maintained stable training despite parameter grouping across GPUs
+- **Kernel Selection**: Overcame PyTorch's default attention kernel choices
+
+**Overall Performance Impact**:
+- Achieved 21% faster training (12 → 10.8 minutes) while improving validation loss (3.28)
+- Enabled more efficient parameter utilization through specialized optimization
+- Improved numerical stability through better normalization and initialization
+- Maximized hardware throughput with kernel-level optimizations
+
+The changes demonstrate sophisticated co-optimization of model architecture, training dynamics, and low-level system performance - particularly notable in maintaining stability while pushing learning rates and iteration counts to their practical limits.

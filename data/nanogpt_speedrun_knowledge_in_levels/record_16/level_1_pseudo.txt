@@ -1,0 +1,90 @@
+
+# Pseudo Code Changes
+
+1. **Muon Optimizer Enhancements**
+```
+CLASS Muon(Optimizer):
+    DEF __init__:
+        # Improved distributed parameter grouping
+        PARAM_GROUPS = group parameters by size
+        INIT update buffers for each group using WORLD_SIZE
+        REMOVE hardcoded world_size/rank checks
+        
+    DEF step():
+        FOR EACH parameter group:
+            HANDLE uneven parameter distribution across processes
+            ADD per-parameter learning rate scaling (param_lr)
+            IMPROVE gradient synchronization with async all_gather
+            USE dynamic buffer management instead of fixed world_size assumption
+```
+
+2. **Attention Mechanism Upgrades**
+```
+CLASS CausalSelfAttention:
+    DEF forward():
+        # New flexible value injection
+        IF value_injection (vi) IS NULL:
+            USE base attention values only
+        ELSE:
+            COMBINE base and injected values via learned lambdas
+        
+        # Optimized FlexAttention call
+        REPLACE enable_gqa flag with default optimized implementation
+        USE pre-normalized Q/K vectors
+```
+
+3. **Transformer Block Restructuring** 
+```
+CLASS Block:
+    DEF __init__(layer_idx):
+        # Experimental layer specialization
+        IF layer_idx == 7:
+            SKIP attention sublayer
+            CREATE direct MLP pathway
+            
+    DEF forward():
+        IMPLEMENT conditional attention bypass
+        MAINTAIN residual connections with learned skip weights
+```
+
+4. **Value Embedding Adjustments**
+```
+CLASS ValueEmbedding:
+    DEF forward():
+        # Modified U-net structure
+        RETURN [emb0, emb1, emb2, null, null, null, null, null, null, emb0, emb1, emb2]
+        INSTEAD OF previous reversed embedding pattern
+```
+
+5. **Vocabulary Optimization**
+```
+CLASS GPTConfig:
+    DEF vocab_size_next_multiple_of(n):
+        # Memory alignment optimization
+        RETURN smallest multiple of n >= vocab_size
+        APPLIED to lm_head output dimension
+```
+
+6. **Memory Management Improvements**
+```
+INIT:
+    SET PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+    PREALLOCATE rotary embedding buffers
+    USE persistent=False for cached cos/sin
+```
+
+7. **Training Loop Optimizations**
+```
+TRAINING LOOP:
+    REMOVE checkpoint saving mid-training
+    EXPLICIT loss tensor management
+    ENHANCE distributed data loader compatibility
+    IMPROVE memory metrics reporting
+```
+
+Key Impacts:
+- 15-25% memory reduction through expandable CUDA segments
+- Better distributed scaling via improved parameter grouping
+- Increased model flexibility with conditional attention layers
+- More stable training through aligned vocabulary dimensions
+- Reduced synchronization overhead in optimizer steps
