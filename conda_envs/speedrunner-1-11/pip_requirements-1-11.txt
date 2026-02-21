@@ -27,7 +27,7 @@ scipy==1.13.1
 # Development and training acceleration
 accelerate==1.6.0
 deepspeed==0.16.3
-ray==2.43.0
+ray==2.54.0
 
 # Jupyter and development environment
 jupyterlab==4.3.6
