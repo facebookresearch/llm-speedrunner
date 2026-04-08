@@ -11,7 +11,7 @@ triton==3.3.0
 
 # LLM and inference
 outlines==0.1.11
-litellm==1.61.15
+litellm==1.83.0
 openai==1.60.2
 anthropic
 tiktoken
