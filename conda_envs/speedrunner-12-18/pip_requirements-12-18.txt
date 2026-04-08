@@ -2,7 +2,7 @@
 torch==2.7.1
 torchvision
 tensorflow==2.18.0
-transformers==4.51.0
+transformers==5.0.0rc3
 huggingface-hub
 tokenizers
 datasets
