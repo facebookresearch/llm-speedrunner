@@ -29,7 +29,7 @@ deepspeed==0.16.3
 ray==2.43.0
 
 # Jupyter and development environment
-jupyterlab==4.3.6
+jupyterlab==4.5.7
 ipython==8.32.0
 
 # Web framework and API
